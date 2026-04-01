@@ -10,7 +10,9 @@
 #include <stdio.h>
 #include <string.h>
 
-#pragma comment(linker, "/EXPORT:DllMain=DllMain_hook")
+#ifdef _MSC_VER
+// Pragma removed - using DllMain directly
+#endif
 
 // -----------------------------------------------------------------------
 // Configuration
@@ -174,11 +176,10 @@ static bool iat_hook_module(HMODULE module)
         if (_stricmp(dllName, "KERNEL32.dll") != 0)
             continue;
 
-        // Walk the IAT
-        PIMAGE_THUNK_DATA iat = (PIMAGE_THUNK_DATA)((BYTE*)module + desc->FirstChunkRVA);
-        PIMAGE_THUNK_DATA iat_end = (PIMAGE_THUNK_DATA)((BYTE*)module + desc->FirstChunkRVA + desc->ChunkSize);
+        // Walk the IAT — walk until NULL (most reliable)
+        PIMAGE_THUNK_DATA iat = (PIMAGE_THUNK_DATA)((BYTE*)module + desc->FirstThunk);
 
-        for (; iat < iat_end && iat->u1.Function; ++iat)
+        for (; iat->u1.Function != 0; ++iat)
         {
             FARPROC* funcPtr = (FARPROC*)&iat->u1.Function;
 
@@ -216,9 +217,8 @@ static bool iat_hook_module(HMODULE module)
 // -----------------------------------------------------------------------
 // DLL entry point
 // -----------------------------------------------------------------------
-static HANDLE g_modsDirHandle = NULL;
 
-BOOL WINAPI DllMain_hook(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
+BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 {
     if (fdwReason == DLL_PROCESS_ATTACH)
     {
@@ -255,7 +255,7 @@ BOOL WINAPI DllMain_hook(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved
             lastSep = strrchr(logPath, '\\');
             if (lastSep) lastSep[1] = '\0';
             fprintf(f, "%s\n", logPath);
-            fprintf(f, "Mod dir:  %s" MOD_SUB_DIR "\n", logPath);
+            fprintf(f, "Mod dir:  %s%s\n", logPath, MOD_SUB_DIR);
             fprintf(f, "GSysFile::Open hooking requires Ghidra analysis to find vtable offset.\n");
             fprintf(f, "Currently using CreateFileA/W IAT hook as fallback.\n");
             fclose(f);

@@ -11,6 +11,7 @@
 #include <windows.h>
 #include <stdio.h>
 #include <string.h>
+#include <tlhelp32.h>
 
 // Resolved at runtime from registry — no hardcoded paths
 static char g_defaultGamePath[MAX_PATH] = {0};
