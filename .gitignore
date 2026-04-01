@@ -1,0 +1,29 @@
+# Claude Code local settings
+.claude/
+
+# Python cache
+__pycache__/
+*.pyc
+.ruff_cache/
+
+# Personal analysis scripts (contain local paths)
+analyze_pe.py
+
+# Environment files
+.env
+.env.*
+*.env
+
+# OS files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Editor files
+*.swp
+*.swo
+*~
+.vscode/settings.json
+.vscode/
+.idea/
+*.sublime-*
