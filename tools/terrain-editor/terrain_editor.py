@@ -2,38 +2,33 @@
 """
 Brutal Legend Terrain Editor
 ============================
-A terrain editor for creating and editing Brutal Legend maps.
+A tool for editing heightfield terrain data for Brutal Legend maps.
 
-Supports:
-- Loading and decoding .Heightfield files
-- Displaying terrain as 2D grayscale image
-- Basic terrain painting (raise/lower)
-- Saving back as .Heightfield format
-- Stitching multiple tiles together
-- Export to standard image formats
+Commands:
+  view        - Display heightfield data as text summary
+  edit-height - Raise/lower terrain in a region by a delta value
+  smooth      - Apply box blur to terrain region
+  export-image - Export as PNG visualization
 
 Heightfield Format:
-- 40-byte custom header + DDS texture (128x128 DXT5)
-- Width/Height: 128 pixels
-- Format: DXT5 (GPU-compressed)
-- Additional metadata after DDS data
+- 40-byte custom header + DDS header + DXT5 compressed data
+- DXT5 texture with 16-bit height values in alpha channel
+- Block size: 4x4 pixels per block, 16 bytes per block
 """
 
 import struct
-import os
 import sys
-from typing import Optional, Tuple, List
-from dataclasses import dataclass
+import os
 import argparse
-import math
+from typing import Optional, Tuple, List
 
-# Optional: Pillow for image display and export
+# Optional: Pillow for image export
 try:
     from PIL import Image
     HAS_PIL = True
 except ImportError:
     HAS_PIL = False
-    print("Warning: Pillow not installed. Image display/export will be limited.")
+    print("Warning: Pillow not installed. Image export disabled.")
 
 # Optional: numpy for numerical operations
 try:
@@ -41,1085 +36,740 @@ try:
     HAS_NUMPY = True
 except ImportError:
     HAS_NUMPY = False
-    print("Warning: numpy not installed. Some features will be limited.")
+    print("Warning: numpy not installed. Using pure Python (slower).")
 
 
-# DDS Pixel Format Flags
-DDPF_ALPHAPIXELS = 0x00000001
-DDPF_FOURCC = 0x00000004
-DDPF_RGB = 0x00000040
-
-# DDS Header Flags
-DDSD_CAPS = 0x00000001
-DDSD_HEIGHT = 0x00000002
-DDSD_WIDTH = 0x00000004
-DDSD_PIXELFORMAT = 0x00001000
-DDSD_MIPMAPCOUNT = 0x00020000
-DDSD_LINEARSIZE = 0x00080000
-DDSD_DEPTH = 0x00800000
-
-# Known FourCC codes
-FOURCC_DXT1 = b'DXT1'
-FOURCC_DXT3 = b'DXT3'
-FOURCC_DXT5 = b'DXT5'
+# Constants for DDS format
+DDS_MAGIC = 0x20534444  # 'DDS '
+DXT5_BLOCK_SIZE = 16  # 4x4 pixels per block
+CUSTOM_HEADER_SIZE = 40
+DDS_HEADER_SIZE = 124
 
 
-@dataclass
-class DDS_HEADER:
-    """DDS file header
-
-    Standard DDS header layout:
-    - 0x00-0x03: size (124)
-    - 0x04-0x07: flags
-    - 0x08-0x0B: height
-    - 0x0C-0x0F: width
-    - 0x10-0x13: pitch/linear_size
-    - 0x14-0x17: depth
-    - 0x18-0x1B: mipmap_count
-    - 0x1C-0x47: reserved1 (44 bytes, 11 DWORDs)
-    - 0x48-0x4B: pf_size (32)
-    - 0x4C-0x4F: pf_flags
-    - 0x50-0x53: pf_four_cc ('DXT5')
-    - 0x54-0x57: pf_rgb_bit_count
-    - 0x58-0x5B: pf_r_bit_mask
-    - 0x5C-0x5F: pf_g_bit_mask
-    - 0x60-0x63: pf_b_bit_mask
-    - 0x64-0x67: pf_a_bit_mask
-    - 0x68-0x6B: caps
-    - 0x6C-0x6F: caps2
-    - 0x70-0x73: caps3
-    - 0x74-0x77: caps4
-    - 0x78-0x7B: reserved2
-    Total: 124 bytes
-    """
-    size: int
-    flags: int
-    height: int
-    width: int
-    pitch_or_linear_size: int
-    depth: int
-    mip_map_count: int
-    reserved1: bytes
-    pf_size: int
-    pf_flags: int
-    pf_four_cc: int
-    pf_rgb_bit_count: int
-    pf_r_bit_mask: int
-    pf_g_bit_mask: int
-    pf_b_bit_mask: int
-    pf_a_bit_mask: int
-    caps: int
-    caps2: int
-    caps3: int
-    caps4: int
-    reserved2: int
-
-    @staticmethod
-    def from_bytes(data: bytes) -> 'DDS_HEADER':
-        if len(data) < 116:
-            raise ValueError(f"DDS header too short: {len(data)} bytes")
-
-        offset = 0
-        size = struct.unpack('<I', data[offset:offset+4])[0]; offset += 4
-        flags = struct.unpack('<I', data[offset:offset+4])[0]; offset += 4
-        height = struct.unpack('<I', data[offset:offset+4])[0]; offset += 4
-        width = struct.unpack('<I', data[offset:offset+4])[0]; offset += 4
-        pitch_or_linear_size = struct.unpack('<I', data[offset:offset+4])[0]; offset += 4
-        depth = struct.unpack('<I', data[offset:offset+4])[0]; offset += 4
-        mip_map_count = struct.unpack('<I', data[offset:offset+4])[0]; offset += 4
-        reserved1 = data[offset:offset+44]; offset += 44  # 11 DWORDs (44 bytes)
-
-        pf_size = struct.unpack('<I', data[offset:offset+4])[0]; offset += 4
-        pf_flags = struct.unpack('<I', data[offset:offset+4])[0]; offset += 4
-        pf_four_cc = struct.unpack('<I', data[offset:offset+4])[0]; offset += 4
-        pf_rgb_bit_count = struct.unpack('<I', data[offset:offset+4])[0]; offset += 4
-        pf_r_bit_mask = struct.unpack('<I', data[offset:offset+4])[0]; offset += 4
-        pf_g_bit_mask = struct.unpack('<I', data[offset:offset+4])[0]; offset += 4
-        pf_b_bit_mask = struct.unpack('<I', data[offset:offset+4])[0]; offset += 4
-        pf_a_bit_mask = struct.unpack('<I', data[offset:offset+4])[0]; offset += 4
-
-        caps = struct.unpack('<I', data[offset:offset+4])[0]; offset += 4
-        caps2 = struct.unpack('<I', data[offset:offset+4])[0]; offset += 4
-        caps3 = struct.unpack('<I', data[offset:offset+4])[0]; offset += 4
-        caps4 = struct.unpack('<I', data[offset:offset+4])[0]; offset += 4
-        reserved2 = struct.unpack('<I', data[offset:offset+4])[0]; offset += 4
-
-        return DDS_HEADER(
-            size=size, flags=flags, height=height, width=width,
-            pitch_or_linear_size=pitch_or_linear_size, depth=depth,
-            mip_map_count=mip_map_count, reserved1=reserved1,
-            pf_size=pf_size, pf_flags=pf_flags, pf_four_cc=pf_four_cc,
-            pf_rgb_bit_count=pf_rgb_bit_count, pf_r_bit_mask=pf_r_bit_mask,
-            pf_g_bit_mask=pf_g_bit_mask, pf_b_bit_mask=pf_b_bit_mask,
-            pf_a_bit_mask=pf_a_bit_mask, caps=caps, caps2=caps2,
-            caps3=caps3, caps4=caps4, reserved2=reserved2
-        )
-
-    def get_four_cc(self) -> bytes:
-        """Get FourCC code as bytes"""
-        return struct.pack('<I', self.pf_four_cc)
-
-    def is_dxt5(self) -> bool:
-        """Check if format is DXT5"""
-        return self.pf_flags & DDPF_FOURCC and self.get_four_cc() == FOURCC_DXT5
-
-    def is_dxt1(self) -> bool:
-        """Check if format is DXT1"""
-        return self.pf_flags & DDPF_FOURCC and self.get_four_cc() == FOURCC_DXT1
-
-
-@dataclass
 class HeightfieldHeader:
-    """Custom header for Brutal Legend Heightfield files
+    """Custom 40-byte header for Brutal Legend Heightfield files."""
 
-    Layout based on analysis of extracted .Heightfield files:
-    - 0x00-0x07: 8 bytes unknown metadata
-    - 0x08-0x0b: 4 bytes type marker (typically 0x0b)
-    - 0x0c-0x0f: 4 bytes unknown
-    - 0x10-0x13: 4 bytes width hint (0x80 = 128)
-    - 0x14-0x17: 4 bytes height hint (0x80 = 128)
-    - 0x18-0x1f: 8 bytes unknown
-    - 0x20-0x23: 4 bytes 'rtxT' marker
-    - 0x24-0x27: 4 bytes data size (DXT5 data size)
-    Total: 40 bytes
-
-    NOTE: The 'DDS ' magic at 0x28 is NOT part of this header.
-    """
-    metadata: bytes  # 8 bytes: unknown metadata
-    type_marker: int  # 4 bytes at 0x08: typically 0x0b
-    unknown_0c: bytes  # 4 bytes at 0x0c: unknown
-    width_hint: int  # 4 bytes at 0x10: 0x80 = 128
-    height_hint: int  # 4 bytes at 0x14: 0x80 = 128
-    unknown_18: bytes  # 8 bytes at 0x18: unknown
-    texture_marker: int  # 4 bytes at 0x20: 'rtxT' (0x54787472)
-    data_size: int  # 4 bytes at 0x24: size of DDS data
+    def __init__(self):
+        self.metadata = bytes(8)
+        self.type_marker = 0x0b
+        self.unknown_0c = bytes(4)
+        self.width_hint = 128
+        self.height_hint = 128
+        self.unknown_18 = bytes(8)
+        self.texture_marker = 0x54787472  # 'rtxT'
+        self.data_size = 0
 
     @staticmethod
-    def from_bytes(data: bytes) -> 'HeightfieldHeader':
+    def parse(data: bytes) -> 'HeightfieldHeader':
+        """Parse header from 40-byte buffer."""
         if len(data) < 40:
-            raise ValueError(f"Heightfield header too short: {len(data)} bytes, need 40")
+            raise ValueError(f"Header too short: {len(data)} bytes, need 40")
 
-        return HeightfieldHeader(
-            metadata=data[0x00:0x08],
-            type_marker=struct.unpack('<I', data[0x08:0x0c])[0],
-            unknown_0c=data[0x0c:0x10],
-            width_hint=struct.unpack('<I', data[0x10:0x14])[0],
-            height_hint=struct.unpack('<I', data[0x14:0x18])[0],
-            unknown_18=data[0x18:0x20],
-            texture_marker=struct.unpack('<I', data[0x20:0x24])[0],
-            data_size=struct.unpack('<I', data[0x24:0x28])[0]
-        )
+        hdr = HeightfieldHeader()
+        hdr.metadata = data[0x00:0x08]
+        hdr.type_marker = struct.unpack('<I', data[0x08:0x0C])[0]
+        hdr.unknown_0c = data[0x0C:0x10]
+        hdr.width_hint = struct.unpack('<I', data[0x10:0x14])[0]
+        hdr.height_hint = struct.unpack('<I', data[0x14:0x18])[0]
+        hdr.unknown_18 = data[0x18:0x20]
+        hdr.texture_marker = struct.unpack('<I', data[0x20:0x24])[0]
+        hdr.data_size = struct.unpack('<I', data[0x24:0x28])[0]
+        return hdr
+
+    def to_bytes(self) -> bytes:
+        """Serialize header to 40 bytes."""
+        out = bytearray(40)
+        out[0x00:0x08] = self.metadata
+        out[0x08:0x0C] = struct.pack('<I', self.type_marker)
+        out[0x0C:0x10] = self.unknown_0c
+        out[0x10:0x14] = struct.pack('<I', self.width_hint)
+        out[0x14:0x18] = struct.pack('<I', self.height_hint)
+        out[0x18:0x20] = self.unknown_18
+        out[0x20:0x24] = struct.pack('<I', self.texture_marker)
+        out[0x24:0x28] = struct.pack('<I', self.data_size)
+        return bytes(out)
 
     def validate(self) -> bool:
-        """Validate header fields"""
+        """Check header fields are valid for a heightfield DDS."""
         valid = True
         if self.type_marker != 0x0b:
-            print(f"Warning: type_marker is 0x{self.type_marker:02x}, expected 0x0b")
+            print(f"Warning: type_marker is 0x{self.type_marker:02X}, expected 0x0B")
             valid = False
-        if self.width_hint != 128:
-            print(f"Warning: width_hint is {self.width_hint}, expected 128")
-            valid = False
-        if self.height_hint != 128:
-            print(f"Warning: height_hint is {self.height_hint}, expected 128")
-            valid = False
-        if self.texture_marker != 0x54787472:  # 'rtxT'
-            print(f"Warning: texture_marker is 0x{self.texture_marker:08x}, expected 0x54787472 ('rtxT')")
+        if self.texture_marker != 0x54787472:
+            print(f"Warning: texture_marker is 0x{self.texture_marker:08X}, expected 0x54787472 ('rtxT')")
             valid = False
         return valid
 
 
-class DXT5Decompressor:
-    """DXT5 texture decompressor for extracting height data"""
+def decode_dxt5_block(block: bytes) -> List[int]:
+    """
+    Decode DXT5 block (16 bytes) to 16 alpha values.
+    DXT5 stores color in R5G6B5 and uses alpha channel for height.
+    Returns list of 16 alpha values (0-255).
+    """
+    if len(block) < 16:
+        raise ValueError(f"Block too short: {len(block)} bytes")
 
-    @staticmethod
-    def decompress_dxt5(block: bytes) -> List[Tuple[int, int, int, int]]:
-        """
-        Decompress a single DXT5 block (16 bytes) to 16 RGBA values.
-        DXT5 YCoCg format stores height in Y channel.
-        """
-        if len(block) < 16:
-            raise ValueError(f"DXT5 block too short: {len(block)} bytes")
+    alpha0 = block[0]
+    alpha1 = block[1]
 
-        # DXT5 alpha block (8 bytes)
-        alpha0 = block[0]
-        alpha1 = block[1]
-
-        # 8 alphas encoded in 3 bits each (stretched)
+    # Build alpha interpolation table
+    if alpha0 > alpha1:
         alpha_table = [
-            alpha0, alpha1,
-            (6 * alpha0 + 1 * alpha1) // 7 if alpha0 > alpha1 else (4 * alpha0 + 1 * alpha1) // 5,
-            (5 * alpha0 + 2 * alpha1) // 7 if alpha0 > alpha1 else (3 * alpha0 + 2 * alpha1) // 5,
-            (4 * alpha0 + 3 * alpha1) // 7 if alpha0 > alpha1 else (2 * alpha0 + 3 * alpha1) // 5,
-            (3 * alpha0 + 4 * alpha1) // 7 if alpha0 > alpha1 else (1 * alpha0 + 4 * alpha1) // 5,
-            (2 * alpha0 + 5 * alpha1) // 7 if alpha0 > alpha1 else (1 * alpha0 + 3 * alpha1) // 4,
-            (1 * alpha0 + 6 * alpha1) // 7 if alpha0 > alpha1 else (alpha1 if alpha0 > alpha1 else 0),
+            alpha0,
+            alpha1,
+            (6*alpha0 + 1*alpha1) // 7,
+            (5*alpha0 + 2*alpha1) // 7,
+            (4*alpha0 + 3*alpha1) // 7,
+            (3*alpha0 + 4*alpha1) // 7,
+            (2*alpha0 + 5*alpha1) // 7,
+            (1*alpha0 + 6*alpha1) // 7,
+        ]
+    else:
+        alpha_table = [
+            alpha0,
+            alpha1,
+            (4*alpha0 + 1*alpha1) // 5,
+            (3*alpha0 + 2*alpha1) // 5,
+            (2*alpha0 + 3*alpha1) // 5,
+            (1*alpha0 + 4*alpha1) // 5,
+            0,
+            255,
         ]
 
-        # Decode alpha indices
-        alpha_bits = struct.unpack('<Q', block[0:8])[0]
-        alpha_indices = []
-        for i in range(16):
-            idx = (alpha_bits >> (3 * i)) & 0x07
-            alpha_indices.append(alpha_table[idx])
+    # Decode alpha indices (3 bits per pixel, 16 pixels)
+    alpha_bits = struct.unpack('<Q', block[0:8])[0]
+    alphas = []
+    for i in range(16):
+        idx = (alpha_bits >> (3 * i)) & 0x07
+        alphas.append(alpha_table[idx])
 
-        # DXT5 color block (8 bytes)
-        c0 = struct.unpack('<H', block[8:10])[0]
-        c1 = struct.unpack('<H', block[10:12])[0]
+    return alphas
 
-        # Extract RGB565 colors
-        r0 = (c0 >> 11) * 255 // 31
-        g0 = ((c0 >> 5) & 0x3F) * 255 // 63
-        b0 = (c0 & 0x1F) * 255 // 31
-        r1 = (c1 >> 11) * 255 // 31
-        g1 = ((c1 >> 5) & 0x3F) * 255 // 63
-        b1 = (c1 & 0x1F) * 255 // 31
 
-        # Color lookup table
-        if c0 > c1:
-            color_table = [
-                (r0, g0, b0),
-                (r1, g1, b1),
-                ((2*r0 + r1) // 3, (2*g0 + g1) // 3, (2*b0 + b1) // 3),
-                ((r0 + 2*r1) // 3, (g0 + 2*g1) // 3, (b0 + 2*b1) // 3),
-            ]
+def encode_dxt5_block(alphas: List[int]) -> bytes:
+    """
+    Encode 16 alpha values into a DXT5 block (16 bytes).
+    Uses simple endpoint encoding.
+    """
+    if len(alphas) != 16:
+        raise ValueError(f"Expected 16 alphas, got {len(alphas)}")
+
+    # Find min/max alpha values as endpoints
+    alpha0 = max(alphas)
+    alpha1 = min(alphas)
+
+    # Build interpolation table
+    if alpha0 > alpha1:
+        alpha_table = [
+            alpha0,
+            alpha1,
+            (6*alpha0 + 1*alpha1) // 7,
+            (5*alpha0 + 2*alpha1) // 7,
+            (4*alpha0 + 3*alpha1) // 7,
+            (3*alpha0 + 4*alpha1) // 7,
+            (2*alpha0 + 5*alpha1) // 7,
+            (1*alpha0 + 6*alpha1) // 7,
+        ]
+    else:
+        alpha_table = [
+            alpha0,
+            alpha1,
+            (4*alpha0 + 1*alpha1) // 5,
+            (3*alpha0 + 2*alpha1) // 5,
+            (2*alpha0 + 3*alpha1) // 5,
+            (1*alpha0 + 4*alpha1) // 5,
+            0,
+            255,
+        ]
+
+    # Encode alpha indices
+    alpha_bits = 0
+    for i, a in enumerate(alphas):
+        if a == alpha0:
+            idx = 0
+        elif a == alpha1:
+            idx = 1
         else:
-            color_table = [
-                (r0, g0, b0),
-                (r1, g1, b1),
-                ((r0 + r1) // 2, (g0 + g1) // 2, (b0 + b1) // 2),
-                (0, 0, 0),  # Transparent
-            ]
-
-        # Decode color indices
-        color_bits = struct.unpack('<I', block[12:16])[0]
-        pixels = []
-        for i in range(16):
-            idx = (color_bits >> (2 * i)) & 0x03
-            r, g, b = color_table[idx]
-            a = alpha_indices[i]
-            pixels.append((r, g, b, a))
-
-        return pixels
-
-    @staticmethod
-    def decompress_texture(width: int, height: int, data: bytes) -> bytes:
-        """
-        Decompress full DXT5 texture to RGBA.
-        DXT5 stores data in 4x4 blocks.
-        """
-        if width % 4 != 0 or height % 4 != 0:
-            raise ValueError(f"Dimensions must be multiples of 4: {width}x{height}")
-
-        blocks_x = width // 4
-        blocks_y = height // 4
-        output = bytearray(width * height * 4)
-
-        block_idx = 0
-        for by in range(blocks_y):
-            for bx in range(blocks_x):
-                block_start = block_idx * 16
-                block = data[block_start:block_start + 16]
-                if len(block) < 16:
-                    block = block + bytes(16 - len(block))
-
-                pixels = DXT5Decompressor.decompress_dxt5(block)
-
-                # Write pixels to output (4x4 block)
-                for py in range(4):
-                    for px in range(4):
-                        x = bx * 4 + px
-                        y = by * 4 + py
-                        if x < width and y < height:
-                            idx = (y * width + x) * 4
-                            p = pixels[py * 4 + px]
-                            output[idx] = p[0]      # R
-                            output[idx + 1] = p[1]  # G
-                            output[idx + 2] = p[2]  # B
-                            output[idx + 3] = p[3]  # A
-
-                block_idx += 1
-
-        return bytes(output)
-
-    @staticmethod
-    def compress_texture_to_dxt5(width: int, height: int, rgba_data: bytes) -> bytes:
-        """
-        Compress RGBA texture to DXT5 format.
-        Returns compressed data bytes.
-        """
-        if width % 4 != 0 or height % 4 != 0:
-            raise ValueError(f"Dimensions must be multiples of 4: {width}x{height}")
-
-        blocks_x = width // 4
-        blocks_y = height // 4
-        output = bytearray()
-
-        for by in range(blocks_y):
-            for bx in range(blocks_x):
-                # Extract 4x4 block
-                block_pixels = []
-                for py in range(4):
-                    for px in range(4):
-                        x = bx * 4 + px
-                        y = by * 4 + py
-                        idx = (y * width + x) * 4
-                        r = rgba_data[idx]
-                        g = rgba_data[idx + 1]
-                        b = rgba_data[idx + 2]
-                        a = rgba_data[idx + 3]
-                        block_pixels.append((r, g, b, a))
-
-                # Compress block to DXT5
-                compressed = DXT5Decompressor.compress_dxt5_block(block_pixels)
-                output.extend(compressed)
-
-        return bytes(output)
-
-    @staticmethod
-    def compress_dxt5_block(pixels: List[Tuple[int, int, int, int]]) -> bytes:
-        """
-        Compress 16 RGBA pixels to a DXT5 block.
-        Uses YCoCg-like encoding where alpha is treated as height.
-        """
-        if len(pixels) != 16:
-            raise ValueError(f"Expected 16 pixels, got {len(pixels)}")
-
-        # DXT5 alpha block encoding
-        alpha_values = [p[3] for p in pixels]
-        alpha0 = max(alpha_values)
-        alpha1 = min(alpha_values)
-
-        # Sort and create alpha table
-        if alpha0 == alpha1:
-            alpha_table = [alpha0, alpha1] + [0] * 6
-        else:
-            mid = (alpha0 + alpha1) // 2
-            alpha_table = [alpha0, alpha1, mid, mid, mid, mid, mid, mid]
-
-        # Encode alpha block
-        alpha_bits = 0
-        for i, a in enumerate(alpha_values):
-            # Find closest alpha in table (first 2 entries have priority)
-            if a == alpha0:
-                idx = 0
-            elif a == alpha1:
-                idx = 1
-            else:
-                # Find closest among remaining
-                best_dist = 256
-                best_idx = 0
-                for j in range(2, 8):
-                    dist = abs(a - alpha_table[j])
-                    if dist < best_dist:
-                        best_dist = dist
-                        best_idx = j
-                idx = best_idx
-            alpha_bits |= (idx << (3 * i))
-
-        alpha_block = struct.pack('<Q', alpha_bits)
-
-        # DXT5 color block encoding (RGB565)
-        r_values = [p[0] for p in pixels]
-        g_values = [p[1] for p in pixels]
-        b_values = [p[2] for p in pixels]
-
-        # Use Y (green) channel as primary for height
-        # Convert to RGB565
-        def to_rgb565(r, g, b):
-            r5 = r * 31 // 255
-            g6 = g * 63 // 255
-            b5 = b * 31 // 255
-            return (r5 << 11) | (g6 << 5) | b5
-
-        # Color selection based on luminance
-        luma = [(0.299*p[0] + 0.587*p[1] + 0.114*p[2]) for p in pixels]
-        sorted_indices = sorted(range(16), key=lambda i: luma[i])
-
-        # Select corner colors
-        c0_idx = sorted_indices[-1]
-        c1_idx = sorted_indices[0]
-        c0 = to_rgb565(*pixels[c0_idx][:3])
-        c1 = to_rgb565(*pixels[c1_idx][:3])
-
-        # Create color table
-        r0 = (c0 >> 11) * 255 // 31
-        g0 = ((c0 >> 5) & 0x3F) * 255 // 63
-        b0 = (c0 & 0x1F) * 255 // 31
-        r1 = (c1 >> 11) * 255 // 31
-        g1 = ((c1 >> 5) & 0x3F) * 255 // 63
-        b1 = (c1 & 0x1F) * 255 // 31
-
-        if c0 > c1:
-            color_table = [
-                (r0, g0, b0),
-                (r1, g1, b1),
-                ((2*r0 + r1) // 3, (2*g0 + g1) // 3, (2*b0 + b1) // 3),
-                ((r0 + 2*r1) // 3, (g0 + 2*g1) // 3, (b0 + 2*b1) // 3),
-            ]
-        else:
-            color_table = [
-                (r0, g0, b0),
-                (r1, g1, b1),
-                ((r0 + r1) // 2, (g0 + g1) // 2, (b0 + b1) // 2),
-                (0, 0, 0),
-            ]
-
-        # Encode color indices
-        color_bits = 0
-        for i in range(16):
-            p = pixels[i][:3]
-            best_dist = 256 * 256
-            best_idx = 0
-            for j, ct in enumerate(color_table):
-                dist = (p[0]-ct[0])**2 + (p[1]-ct[1])**2 + (p[2]-ct[2])**2
+            best_dist = 256
+            best_idx = 2
+            for j in range(2, 8):
+                dist = abs(a - alpha_table[j])
                 if dist < best_dist:
                     best_dist = dist
                     best_idx = j
-            color_bits |= (best_idx << (2 * i))
+            idx = best_idx
+        alpha_bits |= (idx << (3 * i))
 
-        color_block = struct.pack('<I', color_bits)
+    # Color endpoints (placeholder - use first pixel's color)
+    color0 = 0xFFFF  # R5G6B5 white
+    color1 = 0x0000  # R5G6B5 black
 
-        return alpha_block + struct.pack('<H', c0) + struct.pack('<H', c1) + color_block
+    # Color indices (all same color for heightfield)
+    color_bits = 0x55555555  # All index 1
+
+    out = bytearray(16)
+    struct.pack_into('<Q', out, 0, alpha_bits)
+    struct.pack_into('<H', out, 8, color0)
+    struct.pack_into('<H', out, 10, color1)
+    struct.pack_into('<I', out, 12, color_bits)
+    return bytes(out)
+
+
+def decode_dxt5_texture(width: int, height: int, data: bytes) -> List[List[int]]:
+    """
+    Decode DXT5 texture to 2D heightmap (alpha channel as height).
+    Returns heightmap as list of lists of integers (0-255).
+    """
+    blocks_x = (width + 3) // 4
+    blocks_y = (height + 3) // 4
+
+    heightmap = [[0] * width for _ in range(height)]
+
+    for by in range(blocks_y):
+        for bx in range(blocks_x):
+            block_offset = (by * blocks_x + bx) * DXT5_BLOCK_SIZE
+            if block_offset + DXT5_BLOCK_SIZE > len(data):
+                break
+
+            block = data[block_offset:block_offset + DXT5_BLOCK_SIZE]
+            alphas = decode_dxt5_block(block)
+
+            # Place 4x4 block into heightmap
+            start_x = bx * 4
+            start_y = by * 4
+            for py in range(4):
+                for px in range(4):
+                    x = start_x + px
+                    y = start_y + py
+                    if x < width and y < height:
+                        heightmap[y][x] = alphas[py * 4 + px]
+
+    return heightmap
+
+
+def encode_dxt5_texture(width: int, height: int, heightmap: List[List[int]]) -> bytes:
+    """
+    Encode heightmap into DXT5 texture.
+    Takes 2D heightmap (list of lists of 0-255) and returns compressed DXT5 bytes.
+    """
+    blocks_x = (width + 3) // 4
+    blocks_y = (height + 3) // 4
+
+    output = bytearray()
+    for by in range(blocks_y):
+        for bx in range(blocks_x):
+            # Extract 4x4 block alphas
+            alphas = []
+            for py in range(4):
+                for px in range(4):
+                    x = bx * 4 + px
+                    y = by * 4 + py
+                    if x < width and y < height:
+                        alphas.append(heightmap[y][x])
+                    else:
+                        alphas.append(0)
+
+            block = encode_dxt5_block(alphas)
+            output.extend(block)
+
+    return bytes(output)
 
 
 class Heightfield:
-    """Represents a Brutal Legend Heightfield file"""
+    """
+    Represents a Brutal Legend Heightfield DDS file.
 
-    # File layout:
-    # - 0x00-0x27: Custom header (40 bytes)
-    # - 0x28-0x2B: 'DDS ' magic
-    # - 0x2C-0xA7: DDS header structure (120 bytes without magic)
-    # - 0xA8: DXT5 compressed data (approximately)
-    HEADER_SIZE = 40
-    DDS_HEADER_OFFSET = 0x2C  # DDS header structure starts here (after magic)
-    DDS_HEADER_SIZE = 124     # DDS header structure size (without magic)
-    DDS_DATA_OFFSET = 0xA8    # DXT5 data starts here
+    File structure:
+    - 0x00-0x27: 40-byte custom header
+    - 0x28-0x2B: 'DDS ' magic
+    - 0x2C-0xA7: 124-byte DDS header
+    - 0xA8+: DXT5 compressed data
+    """
+
+    DDS_OFFSET = 0x28
+    DATA_OFFSET = 0xA8
 
     def __init__(self):
-        self.header: Optional[HeightfieldHeader] = None
-        self.dds_header: Optional[DDS_HEADER] = None
-        self.dxt5_data: Optional[bytes] = None
-        self.extra_data: Optional[bytes] = None
-        self.width: int = 128
-        self.height: int = 128
-        self.rgba_data: Optional[bytes] = None  # Decompressed RGBA
+        self.custom_header = HeightfieldHeader()
+        self.width = 128
+        self.height = 128
+        self.dxt5_data = b''
+        self.extra_data = b''
+        self.heightmap: List[List[int]] = []
 
     @classmethod
     def load(cls, filepath: str) -> 'Heightfield':
-        """Load a Heightfield file from disk"""
+        """Load a heightfield DDS file."""
         hf = cls()
 
-        with open(filepath, 'rb') as f:
-            data = f.read()
+        try:
+            with open(filepath, 'rb') as f:
+                data = f.read()
+        except FileNotFoundError:
+            raise FileNotFoundError(f"Heightfield file not found: {filepath}")
+        except IOError as e:
+            raise IOError(f"Error reading heightfield: {e}")
 
-        # File layout: 40-byte custom header + 128-byte DDS header + DXT5 data
-        min_size = cls.HEADER_SIZE + cls.DDS_HEADER_SIZE
-        if len(data) < min_size:
-            raise ValueError(f"File too small: {len(data)} bytes, need at least {min_size}")
+        if len(data) < 0xA8:
+            raise ValueError(f"File too small: {len(data)} bytes (expected at least 168)")
 
-        # Parse custom header (40 bytes at 0x00)
-        hf.header = HeightfieldHeader.from_bytes(data[0:cls.HEADER_SIZE])
-        hf.header.validate()
+        # Parse custom header
+        hf.custom_header = HeightfieldHeader.parse(data[0:CUSTOM_HEADER_SIZE])
 
-        # Verify DDS magic at 0x28
+        # Verify DDS magic
         dds_magic = struct.unpack('<I', data[0x28:0x2C])[0]
-        if dds_magic != 0x20534444:  # 'DDS '
-            raise ValueError(f"Invalid DDS magic: 0x{dds_magic:08X}, expected 0x20534444 ('DDS ')")
+        if dds_magic != DDS_MAGIC:
+            raise ValueError(f"Invalid DDS magic: 0x{dds_magic:08X}, expected 0x{DDS_MAGIC:08X} ('DDS ')")
 
-        # Parse DDS header (128 bytes at 0x28, includes magic + structure)
-        hf.dds_header = DDS_HEADER.from_bytes(data[cls.DDS_HEADER_OFFSET:cls.DDS_HEADER_OFFSET + cls.DDS_HEADER_SIZE])
+        # Parse DDS header to get dimensions
+        dds_flags = struct.unpack('<I', data[0x2C:0x30])[0]
+        dds_height = struct.unpack('<I', data[0x30:0x34])[0]
+        dds_width = struct.unpack('<I', data[0x34:0x38])[0]
+        pf_flags = struct.unpack('<I', data[0x50:0x54])[0]
+        pf_fourcc = struct.unpack('<I', data[0x54:0x58])[0]
 
-        if not hf.dds_header.is_dxt5():
-            raise ValueError(f"Only DXT5 format supported, found: {hf.dds_header.get_four_cc()}")
+        # Check for DXT5 format
+        if pf_fourcc != 0x35545844:  # 'DXT5'
+            raise ValueError(f"Only DXT5 format supported, got: 0x{pf_fourcc:08X}")
 
-        hf.width = hf.dds_header.width
-        hf.height = hf.dds_header.height
+        hf.width = dds_width
+        hf.height = dds_height
 
-        # DXT5 data starts at 0xA8 = 168
-        dds_data_offset = cls.DDS_DATA_OFFSET
-        dds_data_size = hf.header.data_size
+        # Calculate expected DXT5 data size
+        blocks_x = (hf.width + 3) // 4
+        blocks_y = (hf.height + 3) // 4
+        expected_dxt5_size = blocks_x * blocks_y * DXT5_BLOCK_SIZE
 
-        if len(data) >= dds_data_offset + dds_data_size:
-            hf.dxt5_data = data[dds_data_offset:dds_data_offset + dds_data_size]
-            hf.extra_data = data[dds_data_offset + dds_data_size:]
+        # Extract DXT5 data (use header data_size if available)
+        if hf.custom_header.data_size > 0:
+            dxt5_size = min(hf.custom_header.data_size, len(data) - cls.DATA_OFFSET)
         else:
-            # Try to calculate DXT5 size
-            expected_dxt5_size = ((hf.width + 3) // 4) * ((hf.height + 3) // 4) * 16
-            hf.dxt5_data = data[dds_data_offset:dds_data_offset + expected_dxt5_size]
-            hf.extra_data = data[dds_data_offset + expected_dxt5_size:]
+            dxt5_size = min(expected_dxt5_size, len(data) - cls.DATA_OFFSET)
 
-        # Decompress DXT5 to RGBA
-        hf.rgba_data = DXT5Decompressor.decompress_texture(hf.width, hf.height, hf.dxt5_data)
+        hf.dxt5_data = data[cls.DATA_OFFSET:cls.DATA_OFFSET + dxt5_size]
+
+        # Extra data after DXT5
+        extra_offset = cls.DATA_OFFSET + len(hf.dxt5_data)
+        if extra_offset < len(data):
+            hf.extra_data = data[extra_offset:]
+
+        # Decode heightmap
+        hf.heightmap = decode_dxt5_texture(hf.width, hf.height, hf.dxt5_data)
 
         return hf
 
     def save(self, filepath: str):
-        """Save Heightfield to disk"""
-        if self.rgba_data is None:
-            raise ValueError("No RGBA data to save")
+        """Save heightfield to DDS file."""
+        # Encode heightmap to DXT5
+        self.dxt5_data = encode_dxt5_texture(self.width, self.height, self.heightmap)
+        self.custom_header.data_size = len(self.dxt5_data)
+        self.custom_header.width_hint = self.width
+        self.custom_header.height_hint = self.height
 
-        # Compress RGBA to DXT5
-        self.dxt5_data = DXT5Decompressor.compress_texture_to_dxt5(self.width, self.height, self.rgba_data)
+        try:
+            with open(filepath, 'wb') as f:
+                # Write custom header (40 bytes)
+                f.write(self.custom_header.to_bytes())
 
-        # Calculate sizes
-        dxt5_size = len(self.dxt5_data)
-        extra_size = len(self.extra_data) if self.extra_data else 0
-        total_size = self.HEADER_SIZE + self.DDS_HEADER_SIZE + dxt5_size + extra_size
+                # Write 'DDS ' magic
+                f.write(b'DDS ')
 
-        # Ensure header values are set
-        if self.header is None:
-            self.header = HeightfieldHeader(
-                metadata=bytes(8),
-                type_marker=0x0b,
-                unknown_0c=bytes(4),
-                width_hint=self.width,
-                height_hint=self.height,
-                unknown_18=bytes(8),
-                texture_marker=0x54787472,  # 'rtxT'
-                data_size=dxt5_size
-            )
-        else:
-            self.header.width_hint = self.width
-            self.header.height_hint = self.height
-            self.header.data_size = dxt5_size
+                # Write DDS header (124 bytes)
+                dds_header = bytearray(124)
+                struct.pack_into('<I', dds_header, 0, 124)  # dwSize
+                struct.pack_into('<I', dds_header, 4, 0x21007)  # dwFlags
+                struct.pack_into('<I', dds_header, 8, self.height)  # dwHeight
+                struct.pack_into('<I', dds_header, 12, self.width)  # dwWidth
+                struct.pack_into('<I', dds_header, 16, 0)  # dwPitchOrLinearSize
+                struct.pack_into('<I', dds_header, 20, 0)  # dwDepth
+                struct.pack_into('<I', dds_header, 24, 1)  # dwMipMapCount
+                # reserved1 (44 bytes of zeros) at offset 28
+                struct.pack_into('<I', dds_header, 72, 32)  # pf.dwSize
+                struct.pack_into('<I', dds_header, 76, 0x04 | 0x40000)  # pf.dwFlags (FOURCC)
+                struct.pack_into('<I', dds_header, 80, 0x35545844)  # pf.dwFourCC ('DXT5')
+                struct.pack_into('<I', dds_header, 84, 0)  # pf.dwRGBBitCount
+                struct.pack_into('<I', dds_header, 88, 0)  # pf.dwRBitMask
+                struct.pack_into('<I', dds_header, 92, 0)  # pf.dwGBitMask
+                struct.pack_into('<I', dds_header, 96, 0)  # pf.dwBBitMask
+                struct.pack_into('<I', dds_header, 100, 0xFF)  # pf.dwABitMask
+                struct.pack_into('<I', dds_header, 108, 0x1000 | 0x04)  # dwCaps (COMPLEX | TEXTURE)
+                struct.pack_into('<I', dds_header, 112, 0)  # dwCaps2
+                struct.pack_into('<I', dds_header, 116, 0)  # dwCaps3
+                struct.pack_into('<I', dds_header, 120, 0)  # dwCaps4
+                f.write(dds_header)
 
-        if self.dds_header is None:
-            self.dds_header = DDS_HEADER(
-                size=124,
-                flags=DDSD_CAPS | DDSD_HEIGHT | DDSD_WIDTH | DDSD_PIXELFORMAT,
-                height=self.height,
-                width=self.width,
-                pitch_or_linear_size=0,
-                depth=0,
-                mip_map_count=1,
-                reserved1=bytes(44),
-                pf_size=32,
-                pf_flags=DDPF_ALPHAPIXELS | DDPF_FOURCC,
-                pf_four_cc=struct.unpack('<I', FOURCC_DXT5)[0],
-                pf_rgb_bit_count=0,
-                pf_r_bit_mask=0,
-                pf_g_bit_mask=0,
-                pf_b_bit_mask=0,
-                pf_a_bit_mask=0xFF,
-                caps=DDSD_CAPS | DDSD_PIXELFORMAT,
-                caps2=0,
-                caps3=0,
-                caps4=0,
-                reserved2=0
-            )
+                # Write DXT5 data
+                f.write(self.dxt5_data)
 
-        # Write file
-        with open(filepath, 'wb') as f:
-            # Write custom header (40 bytes at offset 0x00)
-            f.write(self.header.metadata)
-            f.write(struct.pack('<I', self.header.type_marker))
-            f.write(self.header.unknown_0c)
-            f.write(struct.pack('<I', self.header.width_hint))
-            f.write(struct.pack('<I', self.header.height_hint))
-            f.write(self.header.unknown_18)
-            f.write(struct.pack('<I', self.header.texture_marker))
-            f.write(struct.pack('<I', self.header.data_size))
+                # Write extra data
+                if self.extra_data:
+                    f.write(self.extra_data)
 
-            # Write 'DDS ' magic at offset 0x28
-            f.write(b'DDS ')
+        except IOError as e:
+            raise IOError(f"Error saving heightfield: {e}")
 
-            # Write DDS header structure
-            dds = self.dds_header
-            f.write(struct.pack('<I', dds.size))
-            f.write(struct.pack('<I', dds.flags))
-            f.write(struct.pack('<I', dds.height))
-            f.write(struct.pack('<I', dds.width))
-            f.write(struct.pack('<I', dds.pitch_or_linear_size))
-            f.write(struct.pack('<I', dds.depth))
-            f.write(struct.pack('<I', dds.mip_map_count))
-            f.write(dds.reserved1)
-            f.write(struct.pack('<I', dds.pf_size))
-            f.write(struct.pack('<I', dds.pf_flags))
-            f.write(struct.pack('<I', dds.pf_four_cc))
-            f.write(struct.pack('<I', dds.pf_rgb_bit_count))
-            f.write(struct.pack('<I', dds.pf_r_bit_mask))
-            f.write(struct.pack('<I', dds.pf_g_bit_mask))
-            f.write(struct.pack('<I', dds.pf_b_bit_mask))
-            f.write(struct.pack('<I', dds.pf_a_bit_mask))
-            f.write(struct.pack('<I', dds.caps))
-            f.write(struct.pack('<I', dds.caps2))
-            f.write(struct.pack('<I', dds.caps3))
-            f.write(struct.pack('<I', dds.caps4))
-            f.write(struct.pack('<I', dds.reserved2))
+    def get_stats(self) -> dict:
+        """Calculate heightfield statistics."""
+        if not self.heightmap:
+            return {'min': 0, 'max': 0, 'avg': 0, 'width': self.width, 'height': self.height}
 
-            # Write DXT5 data
-            f.write(self.dxt5_data)
+        min_h = 255
+        max_h = 0
+        total = 0
+        count = 0
 
-            # Write extra data
-            if self.extra_data:
-                f.write(self.extra_data)
+        for row in self.heightmap:
+            for h in row:
+                if h > 0:
+                    min_h = min(min_h, h)
+                    max_h = max(max_h, h)
+                    total += h
+                    count += 1
 
-    def get_height_map(self) -> List[List[float]]:
-        """Extract grayscale height values (0.0 to 1.0) from RGBA data"""
-        if self.rgba_data is None:
-            return []
+        if count == 0:
+            return {'min': 0, 'max': 0, 'avg': 0, 'width': self.width, 'height': self.height}
 
-        height_map = []
+        return {
+            'min': min_h,
+            'max': max_h,
+            'avg': total / count,
+            'width': self.width,
+            'height': self.height
+        }
+
+    def edit_height_region(self, x1: int, y1: int, x2: int, y2: int, delta: int):
+        """
+        Raise or lower terrain in a rectangular region.
+
+        Args:
+            x1, y1: Top-left corner (inclusive)
+            x2, y2: Bottom-right corner (exclusive)
+            delta: Height change (+ve to raise, -ve to lower)
+        """
+        # Clamp coordinates
+        x1 = max(0, min(x1, self.width))
+        y1 = max(0, min(y1, self.height))
+        x2 = max(0, min(x2, self.width))
+        y2 = max(0, min(y2, self.height))
+
+        if x1 >= x2 or y1 >= y2:
+            print(f"Warning: Invalid region ({x1},{y1})-({x2},{y2}), skipping")
+            return
+
+        print(f"Editing region: ({x1},{y1}) to ({x2},{y2}), delta={delta}")
+
+        for y in range(y1, y2):
+            for x in range(x1, x2):
+                new_h = self.heightmap[y][x] + delta
+                self.heightmap[y][x] = max(0, min(255, new_h))
+
+    def smooth_region(self, x1: int, y1: int, x2: int, y2: int, iterations: int = 1):
+        """
+        Apply box blur to a rectangular region.
+
+        Args:
+            x1, y1: Top-left corner (inclusive)
+            x2, y2: Bottom-right corner (exclusive)
+            iterations: Number of blur passes
+        """
+        # Clamp coordinates
+        x1 = max(0, min(x1, self.width))
+        y1 = max(0, min(y1, self.height))
+        x2 = max(0, min(x2, self.width))
+        y2 = max(0, min(y2, self.height))
+
+        if x1 >= x2 or y1 >= y2:
+            print(f"Warning: Invalid region ({x1},{y1})-({x2},{y2}), skipping")
+            return
+
+        print(f"Smoothing region: ({x1},{y1}) to ({x2},{y2}), iterations={iterations}")
+
+        for _ in range(iterations):
+            # Create copy for averaging
+            smoothed = [row[:] for row in self.heightmap]
+
+            for y in range(y1, y2):
+                for x in range(x1, x2):
+                    # Box blur: average of 3x3 neighborhood
+                    sum_h = 0
+                    count = 0
+                    for ny in range(max(0, y-1), min(self.height, y+2)):
+                        for nx in range(max(0, x-1), min(self.width, x+2)):
+                            sum_h += self.heightmap[ny][nx]
+                            count += 1
+                    smoothed[y][x] = sum_h // count
+
+            self.heightmap = smoothed
+
+    def export_image(self, filepath: str):
+        """Export heightfield as grayscale PNG image."""
+        if not HAS_PIL:
+            raise ImportError("Pillow not installed, cannot export image")
+
+        # Normalize heightmap to 0-255
+        stats = self.get_stats()
+        img_data = []
         for y in range(self.height):
             row = []
             for x in range(self.width):
-                idx = (y * self.width + x) * 4
-                # Use alpha channel as height (per DXT5 YCoCg format)
-                height = self.rgba_data[idx + 3] / 255.0
-                row.append(height)
-            height_map.append(row)
+                h = self.heightmap[y][x]
+                # Normalize based on min/max
+                if stats['max'] > stats['min']:
+                    normalized = int((h - stats['min']) / (stats['max'] - stats['min']) * 255)
+                else:
+                    normalized = h
+                row.append(normalized)
+            img_data.append(row)
 
-        return height_map
-
-    def set_height_map(self, height_map: List[List[float]]):
-        """Set height values from grayscale height map"""
-        if len(height_map) != self.height or len(height_map[0]) != self.width:
-            raise ValueError(f"Height map dimensions must be {self.height}x{self.width}")
-
-        self.rgba_data = bytearray(self.width * self.height * 4)
-        for y in range(self.height):
-            for x in range(self.width):
-                idx = (y * self.width + x) * 4
-                h = int(height_map[y][x] * 255)
-                h = max(0, min(255, h))
-                self.rgba_data[idx] = h       # R
-                self.rgba_data[idx + 1] = h   # G
-                self.rgba_data[idx + 2] = h   # B
-                self.rgba_data[idx + 3] = h   # A (height)
-
-    def get_grayscale_image(self) -> 'Image.Image':
-        """Get terrain as PIL grayscale image"""
-        if not HAS_PIL:
-            raise ImportError("Pillow is required for image conversion")
-
-        height_map = self.get_height_map()
         img = Image.new('L', (self.width, self.height))
         for y in range(self.height):
             for x in range(self.width):
-                pixel = int(height_map[y][x] * 255)
-                img.putpixel((x, y), pixel)
+                img.putpixel((x, y), img_data[y][x])
 
-        return img
-
-    def apply_brush(self, cx: int, cy: int, radius: float, strength: float, mode: str = 'raise'):
-        """
-        Apply a brush stroke at (cx, cy) with given radius and strength.
-
-        Args:
-            cx: Center X coordinate
-            cy: Center Y coordinate
-            radius: Brush radius in pixels
-            strength: Effect strength (0.0 to 1.0)
-            mode: 'raise', 'lower', or 'smooth'
-        """
-        if self.rgba_data is None:
-            return
-
-        if mode not in ('raise', 'lower', 'smooth'):
-            raise ValueError(f"Unknown mode: {mode}")
-
-        height_map = self.get_height_map()
-        new_height_map = [[h for h in row] for row in height_map]
-
-        r2 = radius * radius
-        for y in range(max(0, int(cy - radius)), min(self.height, int(cy + radius + 1))):
-            for x in range(max(0, int(cx - radius)), min(self.width, int(cx + radius + 1))):
-                dx = x - cx
-                dy = y - cy
-                dist2 = dx * dx + dy * dy
-                if dist2 <= r2:
-                    dist = math.sqrt(dist2)
-                    falloff = 1.0 - (dist / radius)
-                    factor = strength * falloff
-
-                    if mode == 'raise':
-                        new_height_map[y][x] = min(1.0, height_map[y][x] + factor)
-                    elif mode == 'lower':
-                        new_height_map[y][x] = max(0.0, height_map[y][x] - factor)
-                    elif mode == 'smooth':
-                        # Average with neighbors
-                        neighbors = []
-                        for ny in range(max(0, y-1), min(self.height, y+2)):
-                            for nx in range(max(0, x-1), min(self.width, x+2)):
-                                if (nx, ny) != (x, y):
-                                    neighbors.append(height_map[ny][nx])
-                        if neighbors:
-                            avg = sum(neighbors) / len(neighbors)
-                            new_height_map[y][x] = height_map[y][x] * (1 - factor) + avg * factor
-
-        self.set_height_map(new_height_map)
-
-    def flatten(self, x0: int, y0: int, x1: int, y1: int, target_height: float):
-        """Flatten a rectangular region to target height"""
-        height_map = self.get_height_map()
-
-        x0 = max(0, min(x0, self.width - 1))
-        y0 = max(0, min(y0, self.height - 1))
-        x1 = max(0, min(x1, self.width))
-        y1 = max(0, min(y1, self.height))
-
-        for y in range(y0, y1):
-            for x in range(x0, x1):
-                height_map[y][x] = target_height
-
-        self.set_height_map(height_map)
-
-    def export_image(self, filepath: str, format: str = 'PNG'):
-        """Export terrain as image file"""
-        if not HAS_PIL:
-            raise ImportError("Pillow is required for image export")
-
-        img = self.get_grayscale_image()
-        img.save(filepath, format=format)
-        print(f"Exported terrain to {filepath}")
+        img.save(filepath, 'PNG')
+        print(f"Exported heightfield to {filepath}")
 
 
-class TerrainTile:
-    """Represents a terrain tile with coordinate information"""
+def validate_input_file(filepath: str) -> bool:
+    """Check if file exists and appears to be a valid heightfield DDS."""
+    if not os.path.exists(filepath):
+        print(f"Error: File not found: {filepath}")
+        return False
 
-    def __init__(self, x: int, y: int, heightfield: Optional[Heightfield] = None):
-        self.x = x
-        self.y = y
-        self.heightfield = heightfield
+    if not filepath.endswith('.Heightfield'):
+        print(f"Warning: File does not have .Heightfield extension: {filepath}")
 
-    @property
-    def coord_string(self) -> str:
-        return f"x{self.x}/y{self.y}"
+    try:
+        with open(filepath, 'rb') as f:
+            data = f.read(0xA8)
 
+        if len(data) < 0xA8:
+            print(f"Error: File too small to be a valid heightfield: {len(data)} bytes")
+            return False
 
-class TerrainWorld:
-    """Manages a collection of terrain tiles"""
+        # Check for 'rtxT' marker at 0x20
+        texture_marker = struct.unpack('<I', data[0x20:0x24])[0]
+        if texture_marker != 0x54787472:
+            print(f"Warning: 'rtxT' marker not found at offset 0x20")
+            print(f"  Found: 0x{texture_marker:08X}")
+            return False
 
-    def __init__(self):
-        self.tiles: dict[Tuple[int, int], TerrainTile] = {}
-        self.tile_size = 128
+        # Check for 'DDS ' magic at 0x28
+        dds_magic = struct.unpack('<I', data[0x28:0x2C])[0]
+        if dds_magic != DDS_MAGIC:
+            print(f"Warning: 'DDS ' magic not found at offset 0x28")
+            print(f"  Found: 0x{dds_magic:08X}")
+            return False
 
-    def add_tile(self, tile: TerrainTile):
-        """Add a tile to the world"""
-        self.tiles[(tile.x, tile.y)] = tile
+        return True
 
-    def get_tile(self, x: int, y: int) -> Optional[TerrainTile]:
-        """Get tile at coordinates"""
-        return self.tiles.get((x, y))
-
-    def load_tile(self, x: int, y: int, filepath: str) -> TerrainTile:
-        """Load a tile from Heightfield file"""
-        hf = Heightfield.load(filepath)
-        tile = TerrainTile(x, y, hf)
-        self.add_tile(tile)
-        return tile
-
-    def get_world_size(self) -> Tuple[int, int, int, int]:
-        """Get world bounds: (min_x, min_y, max_x, max_y)"""
-        if not self.tiles:
-            return 0, 0, 0, 0
-
-        xs = [t.x for t in self.tiles.values()]
-        ys = [t.y for t in self.tiles.values()]
-        return min(xs), min(ys), max(xs), max(ys)
-
-    def stitch_tiles(self) -> Optional[Heightfield]:
-        """
-        Stitch all tiles together into a single heightfield.
-        Returns combined Heightfield.
-        """
-        if not self.tiles:
-            return None
-
-        min_x, min_y, max_x, max_y = self.get_world_size()
-        num_tiles_x = max_x - min_x + 1
-        num_tiles_y = max_y - min_y + 1
-
-        combined_width = num_tiles_x * self.tile_size
-        combined_height = num_tiles_y * self.tile_size
-
-        # Create combined heightfield
-        combined = Heightfield()
-        combined.width = combined_width
-        combined.height = combined_height
-        combined.rgba_data = bytearray(combined_width * combined_height * 4)
-
-        # Place each tile
-        for tile in self.tiles.values():
-            if tile.heightfield is None or tile.heightfield.rgba_data is None:
-                continue
-
-            dest_x = (tile.x - min_x) * self.tile_size
-            dest_y = (tile.y - min_y) * self.tile_size
-
-            for y in range(self.tile_size):
-                for x in range(self.tile_size):
-                    src_idx = (y * self.tile_size + x) * 4
-                    dest_idx = ((dest_y + y) * combined_width + dest_x + x) * 4
-                    combined.rgba_data[dest_idx] = tile.heightfield.rgba_data[src_idx]
-                    combined.rgba_data[dest_idx + 1] = tile.heightfield.rgba_data[src_idx + 1]
-                    combined.rgba_data[dest_idx + 2] = tile.heightfield.rgba_data[src_idx + 2]
-                    combined.rgba_data[dest_idx + 3] = tile.heightfield.rgba_data[src_idx + 3]
-
-        return combined
-
-    def export_stitched(self, filepath: str):
-        """Export stitched world as image"""
-        combined = self.stitch_tiles()
-        if combined:
-            combined.export_image(filepath)
-            print(f"Exported stitched world ({combined.width}x{combined.height}) to {filepath}")
+    except IOError as e:
+        print(f"Error reading file: {e}")
+        return False
 
 
-class TerrainEditor:
-    """Interactive terrain editor with brush painting"""
+def cmd_view(args):
+    """Display heightfield data as text summary."""
+    if not validate_input_file(args.input):
+        return 1
 
-    def __init__(self, heightfield: Optional[Heightfield] = None):
-        self.heightfield = heightfield or Heightfield()
-        self.modified = False
-        self.current_brush_radius = 10.0
-        self.current_brush_strength = 0.5
-        self.current_mode = 'raise'
+    print(f"\nLoading heightfield: {args.input}")
+    print("-" * 50)
 
-    def load_file(self, filepath: str):
-        """Load Heightfield from file"""
-        self.heightfield = Heightfield.load(filepath)
-        self.modified = False
-        print(f"Loaded {filepath} ({self.heightfield.width}x{self.heightfield.height})")
+    try:
+        hf = Heightfield.load(args.input)
+    except Exception as e:
+        print(f"Error loading heightfield: {e}")
+        return 1
 
-    def save_file(self, filepath: str):
-        """Save Heightfield to file"""
-        self.heightfield.save(filepath)
-        self.modified = False
-        print(f"Saved {filepath}")
+    stats = hf.get_stats()
 
-    def paint(self, x: int, y: int):
-        """Apply brush stroke at position"""
-        self.heightfield.apply_brush(
-            x, y,
-            radius=self.current_brush_radius,
-            strength=self.current_brush_strength,
-            mode=self.current_mode
-        )
-        self.modified = True
+    print(f"File: {args.input}")
+    print(f"Dimensions: {stats['width']} x {stats['height']}")
+    print(f"Min height: {stats['min']}")
+    print(f"Max height: {stats['max']}")
+    print(f"Avg height: {stats['avg']:.2f}")
+    print(f"Custom header type marker: 0x{hf.custom_header.type_marker:02X}")
+    print(f"Custom header width hint: {hf.custom_header.width_hint}")
+    print(f"Custom header height hint: {hf.custom_header.height_hint}")
+    print(f"DXT5 data size: {len(hf.dxt5_data)} bytes")
+    print(f"Extra data size: {len(hf.extra_data)} bytes")
 
-    def set_brush(self, radius: float, strength: float):
-        """Set brush parameters"""
-        self.current_brush_radius = radius
-        self.current_brush_strength = strength
+    # Show a small sample of the heightmap
+    if args.verbose and hf.heightmap:
+        print("\nHeightmap sample (top-left 8x8):")
+        for y in range(min(8, hf.height)):
+            row = []
+            for x in range(min(8, hf.width)):
+                row.append(f"{hf.heightmap[y][x]:3d}")
+            print("  " + " ".join(row))
 
-    def export_image(self, filepath: str):
-        """Export current terrain as image"""
-        self.heightfield.export_image(filepath)
+    print("-" * 50)
+    return 0
+
+
+def cmd_edit_height(args):
+    """Raise or lower terrain in a region."""
+    if not validate_input_file(args.input):
+        return 1
+
+    print(f"\nEditing heightfield: {args.input}")
+    print("-" * 50)
+
+    try:
+        hf = Heightfield.load(args.input)
+    except Exception as e:
+        print(f"Error loading heightfield: {e}")
+        return 1
+
+    stats_before = hf.get_stats()
+    print(f"Before: min={stats_before['min']}, max={stats_before['max']}, avg={stats_before['avg']:.2f}")
+
+    # Apply height edit
+    hf.edit_height_region(args.x1, args.y1, args.x2, args.y2, args.delta)
+
+    stats_after = hf.get_stats()
+    print(f"After: min={stats_after['min']}, max={stats_after['max']}, avg={stats_after['avg']:.2f}")
+
+    # Save
+    print(f"\nSaving to: {args.output}")
+    try:
+        hf.save(args.output)
+        print("Save complete.")
+    except Exception as e:
+        print(f"Error saving heightfield: {e}")
+        return 1
+
+    # Optional export
+    if args.export:
+        try:
+            hf.export_image(args.export)
+        except Exception as e:
+            print(f"Warning: Export failed: {e}")
+
+    print("-" * 50)
+    return 0
+
+
+def cmd_smooth(args):
+    """Apply box blur to terrain region."""
+    if not validate_input_file(args.input):
+        return 1
+
+    print(f"\nSmoothing heightfield: {args.input}")
+    print("-" * 50)
+
+    try:
+        hf = Heightfield.load(args.input)
+    except Exception as e:
+        print(f"Error loading heightfield: {e}")
+        return 1
+
+    stats_before = hf.get_stats()
+    print(f"Before: min={stats_before['min']}, max={stats_before['max']}, avg={stats_before['avg']:.2f}")
+
+    # Apply smoothing
+    hf.smooth_region(args.x1, args.y1, args.x2, args.y2, args.iterations)
+
+    stats_after = hf.get_stats()
+    print(f"After: min={stats_after['min']}, max={stats_after['max']}, avg={stats_after['avg']:.2f}")
+
+    # Save
+    print(f"\nSaving to: {args.output}")
+    try:
+        hf.save(args.output)
+        print("Save complete.")
+    except Exception as e:
+        print(f"Error saving heightfield: {e}")
+        return 1
+
+    print("-" * 50)
+    return 0
+
+
+def cmd_export_image(args):
+    """Export heightfield as PNG visualization."""
+    if not validate_input_file(args.input):
+        return 1
+
+    print(f"\nExporting heightfield: {args.input}")
+
+    try:
+        hf = Heightfield.load(args.input)
+        hf.export_image(args.output)
+    except Exception as e:
+        print(f"Error exporting heightfield: {e}")
+        return 1
+
+    return 0
 
 
 def main():
-    """Main entry point"""
+    """Main entry point with argparse CLI."""
     parser = argparse.ArgumentParser(
-        description='Brutal Legend Terrain Editor',
+        description='Brutal Legend Terrain Editor - Edit heightfield terrain data',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  %(prog)s edit input.Heightfield output.Heightfield --brush-size 5 --raise
-  %(prog)s visualize input.Heightfield
-  %(prog)s load file.Heightfield
-  %(prog)s show file.Heightfield
-  %(prog)s paint file.Heightfield -x 64 -y 64 -r 10 -s 0.5 -m raise
-  %(prog)s save file.Heightfield -o output.Heightfield
-  %(prog)s export file.Heightfield -o terrain.png
-  %(prog)s stitch dir/ -o stitched.png
+  %(prog)s view input.Heightfield
+  %(prog)s edit-height input.Heightfield output.Heightfield --x1 0 --y1 0 --x2 64 --y2 64 --delta 20
+  %(prog)s smooth input.Heightfield output.Heightfield --x1 32 --y1 32 --x2 96 --y2 96
+  %(prog)s export-image input.Heightfield --output terrain.png
         """
     )
 
-    subparsers = parser.add_subparsers(dest='command', help='Commands')
+    subparsers = parser.add_subparsers(dest='command', help='Available commands')
 
-    # edit command (primary use case)
-    edit_parser = subparsers.add_parser('edit', help='Edit terrain with brush tool')
+    # view command
+    view_parser = subparsers.add_parser('view', help='Display heightfield data as text summary')
+    view_parser.add_argument('input', help='Input .Heightfield file')
+    view_parser.add_argument('--verbose', '-v', action='store_true', help='Show heightmap sample')
+
+    # edit-height command
+    edit_parser = subparsers.add_parser('edit-height', help='Raise/lower terrain in a region')
     edit_parser.add_argument('input', help='Input .Heightfield file')
     edit_parser.add_argument('output', help='Output .Heightfield file')
-    edit_parser.add_argument('--brush-size', type=int, default=5, dest='brush_size',
-                              help='Brush radius in pixels (default: 5)')
-    edit_parser.add_argument('--strength', type=float, default=0.5,
-                              help='Brush strength 0.0-1.0 (default: 0.5)')
-    edit_parser.add_argument('--raise', action='store_true', dest='raise_mode',
-                              help='Raise terrain (default)')
-    edit_parser.add_argument('--lower', action='store_true', dest='lower_mode',
-                              help='Lower terrain')
-    edit_parser.add_argument('--smooth', action='store_true',
-                              help='Smooth terrain')
-    edit_parser.add_argument('--center', type=int, nargs=2, default=[64, 64], metavar=('X', 'Y'),
-                              help='Brush center coordinates (default: 64 64)')
-    edit_parser.add_argument('--export', metavar='FILE',
-                              help='Export edited terrain to image file')
+    edit_parser.add_argument('--x1', type=int, required=True, help='Top-left X coordinate')
+    edit_parser.add_argument('--y1', type=int, required=True, help='Top-left Y coordinate')
+    edit_parser.add_argument('--x2', type=int, required=True, help='Bottom-right X coordinate')
+    edit_parser.add_argument('--y2', type=int, required=True, help='Bottom-right Y coordinate')
+    edit_parser.add_argument('--delta', type=int, required=True, help='Height change (+/-)')
+    edit_parser.add_argument('--export', help='Export result to PNG file')
 
-    # visualize command (primary use case)
-    viz_parser = subparsers.add_parser('visualize', help='Visualize terrain')
-    viz_parser.add_argument('file', help='Heightfield file to visualize')
-    viz_parser.add_argument('--3d', action='store_true', help='Show 3D visualization')
-    viz_parser.add_argument('--output', help='Save visualization to file')
-    viz_parser.add_argument('--export', help='Export to image file')
+    # smooth command
+    smooth_parser = subparsers.add_parser('smooth', help='Apply box blur to terrain region')
+    smooth_parser.add_argument('input', help='Input .Heightfield file')
+    smooth_parser.add_argument('output', help='Output .Heightfield file')
+    smooth_parser.add_argument('--x1', type=int, required=True, help='Top-left X coordinate')
+    smooth_parser.add_argument('--y1', type=int, required=True, help='Top-left Y coordinate')
+    smooth_parser.add_argument('--x2', type=int, required=True, help='Bottom-right X coordinate')
+    smooth_parser.add_argument('--y2', type=int, required=True, help='Bottom-right Y coordinate')
+    smooth_parser.add_argument('--iterations', type=int, default=1, help='Number of blur passes (default: 1)')
 
-    # load command
-    load_parser = subparsers.add_parser('load', help='Load a Heightfield file')
-    load_parser.add_argument('file', help='Heightfield file to load')
-
-    # show command
-    show_parser = subparsers.add_parser('show', help='Display terrain info')
-    show_parser.add_argument('file', help='Heightfield file to show')
-
-    # paint command
-    paint_parser = subparsers.add_parser('paint', help='Paint terrain')
-    paint_parser.add_argument('file', help='Heightfield file to paint')
-    paint_parser.add_argument('-x', '--x', type=int, default=64, help='X coordinate')
-    paint_parser.add_argument('-y', '--y', type=int, default=64, help='Y coordinate')
-    paint_parser.add_argument('-r', '--radius', type=float, default=10.0, help='Brush radius')
-    paint_parser.add_argument('-s', '--strength', type=float, default=0.5, help='Brush strength (0-1)')
-    paint_parser.add_argument('-m', '--mode', choices=['raise', 'lower', 'smooth'], default='raise', help='Paint mode')
-
-    # save command
-    save_parser = subparsers.add_parser('save', help='Save a Heightfield file')
-    save_parser.add_argument('file', help='Heightfield file to save')
-    save_parser.add_argument('-o', '--output', required=True, help='Output file')
-
-    # export command
-    export_parser = subparsers.add_parser('export', help='Export terrain as image')
-    export_parser.add_argument('file', help='Heightfield file to export')
-    export_parser.add_argument('-o', '--output', required=True, help='Output image file')
-    export_parser.add_argument('-f', '--format', default='PNG', help='Image format (PNG, TIF, JPG)')
-
-    # stitch command
-    stitch_parser = subparsers.add_parser('stitch', help='Stitch multiple tiles together')
-    stitch_parser.add_argument('dir', help='Directory containing Heightfield files')
-    stitch_parser.add_argument('-o', '--output', required=True, help='Output image file')
-    stitch_parser.add_argument('--pattern', default='*.Heightfield', help='File pattern')
+    # export-image command
+    export_parser = subparsers.add_parser('export-image', help='Export as PNG visualization')
+    export_parser.add_argument('input', help='Input .Heightfield file')
+    export_parser.add_argument('--output', '-o', required=True, help='Output PNG file')
 
     args = parser.parse_args()
 
-    if args.command == 'edit':
-        # Primary edit command
-        editor = TerrainEditor()
-        editor.load_file(args.input)
+    if args.command is None:
+        parser.print_help()
+        return 1
 
-        # Determine brush mode
-        if args.smooth:
-            mode = 'smooth'
-        elif args.lower_mode:
-            mode = 'lower'
-        else:
-            mode = 'raise'
-
-        editor.set_brush(args.brush_size, args.strength)
-        editor.current_mode = mode
-
-        cx, cy = args.center
-        editor.paint(cx, cy)
-
-        editor.save_file(args.output)
-        print(f"Edited terrain: {args.input} -> {args.output}")
-        print(f"  Mode: {mode}, Brush size: {args.brush_size}, Strength: {args.strength}")
-        print(f"  Center: ({cx}, {cy})")
-
-        if args.export:
-            editor.export_image(args.export)
-            print(f"  Exported preview to: {args.export}")
-
-    elif args.command == 'visualize':
-        # Primary visualize command
-        hf = Heightfield.load(args.file)
-        print(f"Heightfield: {args.file}")
-        print(f"  Dimensions: {hf.width}x{hf.height}")
-        print(f"  DXT5 data size: {len(hf.dxt5_data)} bytes")
-
-        if args.output or args.export:
-            output_file = args.output or args.export
-            hf.export_image(output_file)
-            print(f"  Exported to: {output_file}")
-        elif HAS_PIL:
-            img = hf.get_grayscale_image()
-            img.show()
-            print(f"  Displaying grayscale preview...")
-
-        if args._3d:
-            try:
-                import matplotlib.pyplot as plt
-                from mpl_toolkits.mplot3d import Axes3D
-
-                if HAS_NUMPY:
-                    X, Y = np.meshgrid(range(hf.height), range(hf.width))
-                    Z = np.array(hf.get_height_map())
-
-                    fig = plt.figure(figsize=(12, 10))
-                    ax = fig.add_subplot(111, projection='3d')
-                    surf = ax.plot_surface(X, Y, Z, cmap='terrain', linewidth=0, antialiased=True)
-                    ax.set_xlabel('X')
-                    ax.set_ylabel('Y')
-                    ax.set_zlabel('Height')
-                    ax.set_title(f'Brutal Legend Heightfield - {args.file}')
-                    fig.colorbar(surf, shrink=0.5, aspect=5)
-                    plt.show()
-                    print(f"  Displaying 3D visualization...")
-                else:
-                    print("3D visualization requires numpy")
-            except ImportError as e:
-                print(f"Cannot create 3D visualization: {e}")
-
-    elif args.command == 'load':
-        editor = TerrainEditor()
-        editor.load_file(args.file)
-        print(f"Use 'show' command to view terrain details")
-
-    elif args.command == 'show':
-        hf = Heightfield.load(args.file)
-        print(f"Heightfield: {args.file}")
-        print(f"  Dimensions: {hf.width}x{hf.height}")
-        print(f"  Type marker: 0x{hf.header.type_marker:02x}")
-        print(f"  Width hint: {hf.header.width_hint}")
-        print(f"  Height hint: {hf.header.height_hint}")
-        print(f"  Texture marker: 0x{hf.header.texture_marker:08x} ('rtxT')")
-        print(f"  Data size: {hf.header.data_size} bytes")
-        print(f"  DDS format: {hf.dds_header.get_four_cc()}")
-        print(f"  DXT5 data size: {len(hf.dxt5_data)} bytes")
-        print(f"  Extra data size: {len(hf.extra_data)} bytes")
-
-        if HAS_PIL:
-            img = hf.get_grayscale_image()
-            img.show()
-            print(f"  Showing grayscale preview...")
-
-    elif args.command == 'paint':
-        editor = TerrainEditor()
-        editor.load_file(args.file)
-        editor.set_brush(args.radius, args.strength)
-        editor.current_mode = args.mode
-        editor.paint(args.x, args.y)
-
-        # Save to same file
-        editor.save_file(args.file)
-        print(f"Painted at ({args.x}, {args.y}) with r={args.radius}, s={args.strength}, mode={args.mode}")
-
-    elif args.command == 'save':
-        hf = Heightfield.load(args.file)
-        hf.save(args.output)
-        print(f"Saved to {args.output}")
-
-    elif args.command == 'export':
-        hf = Heightfield.load(args.file)
-        hf.export_image(args.output, args.format)
-
-    elif args.command == 'stitch':
-        import glob
-        world = TerrainWorld()
-        pattern = os.path.join(args.dir, args.pattern)
-        files = glob.glob(pattern)
-
-        for filepath in files:
-            hf = Heightfield.load(filepath)
-            idx = len(world.tiles)
-            tile_x = idx % 10
-            tile_y = idx // 10
-            tile = TerrainTile(tile_x, tile_y, hf)
-            world.add_tile(tile)
-
-        world.export_stitched(args.output)
-
+    if args.command == 'view':
+        return cmd_view(args)
+    elif args.command == 'edit-height':
+        return cmd_edit_height(args)
+    elif args.command == 'smooth':
+        return cmd_smooth(args)
+    elif args.command == 'export-image':
+        return cmd_export_image(args)
     else:
         parser.print_help()
+        return 1
 
 
 if __name__ == '__main__':
-    main()
+    sys.exit(main())

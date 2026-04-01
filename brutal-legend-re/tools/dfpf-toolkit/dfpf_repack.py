@@ -14,6 +14,7 @@ import struct
 import zlib
 import os
 import sys
+import argparse
 from pathlib import Path
 from typing import Tuple, List, Dict, Optional
 
@@ -47,59 +48,82 @@ class DFPFRepacker:
         self.records: List[FileRecord] = []
 
     def load_from_extracted(self, extracted_dir: str) -> None:
-        """Load file info from an extracted directory structure."""
+        """Load file info from an extracted directory structure.
+
+        BUG FIX: Previously this rebuilt file_extensions from scratch and recalculated
+        file_type_index using extension lookup, which broke the original file order.
+        Now we preserve the original record metadata from load_from_header() and only
+        update the file DATA. Files are matched by filename to the original records.
+        """
         ext_dir = Path(extracted_dir)
         if not ext_dir.exists():
             raise FileNotFoundError(f"Extracted directory not found: {ext_dir}")
 
-        # Scan for files and determine extensions
-        found_exts = set()
-        found_files = []
+        # Build a lookup of extracted files by filename
+        extracted_files: Dict[str, Path] = {}
+        found_exts: set = set()
 
         for root, dirs, files in os.walk(ext_dir):
             for fname in files:
                 fpath = Path(root)
                 rel_path = fpath.relative_to(ext_dir)
+                filename = str(rel_path).replace('\\', '/')
                 ext = fname.split('.')[-1].lower() if '.' in fname else ''
 
                 found_exts.add(ext)
-                found_files.append((rel_path, fname, ext, fpath / fname))
+                extracted_files[filename] = fpath / fname
 
-        # Sort extensions for consistent ordering
-        self.file_extensions = sorted(found_exts)
+        # Track which original records we've matched
+        matched_count = 0
+        unmatched_files = []
 
-        # Create records
-        self.records = []
-        for i, (rel_path, fname, ext, fpath) in enumerate(found_files):
-            record = FileRecord()
-            record.filename = str(rel_path).replace('\\', '/')
-            record.extension = ext
-            record.file_type_index = self.file_extensions.index(ext)
+        # Update existing records with new data from extracted files
+        for record in self.records:
+            if record.filename in extracted_files:
+                fpath = extracted_files[record.filename]
+                try:
+                    with open(fpath, 'rb') as f:
+                        data = f.read()
 
-            # Read file data
-            with open(fpath, 'rb') as f:
-                record.data = f.read()
+                    record.uncompressed_size = len(data)
 
-            record.uncompressed_size = len(record.data)
+                    # Determine compression - use zlib if data compresses well
+                    if len(data) > 0:
+                        compressed = zlib.compress(data, 9)
+                        if len(compressed) < len(data):
+                            record.data = compressed
+                            record.compression_type = COMPRESSION_ZLIB_V5
+                            record.size = len(compressed)
+                        else:
+                            record.compression_type = COMPRESSION_UNCOMPRESSED_V5
+                            record.size = record.uncompressed_size
+                            record.data = data
+                    else:
+                        record.compression_type = COMPRESSION_UNCOMPRESSED_V5
+                        record.size = 0
+                        record.data = data
 
-            # Determine compression - use zlib if data compresses well
-            if len(record.data) > 0:
-                compressed = zlib.compress(record.data, 9)
-                if len(compressed) < len(record.data):
-                    record.data = compressed
-                    record.compression_type = COMPRESSION_ZLIB_V5
-                    record.size = len(compressed)
-                else:
-                    record.compression_type = COMPRESSION_UNCOMPRESSED_V5
-                    record.size = record.uncompressed_size
+                    matched_count += 1
+                except (IOError, OSError) as e:
+                    print(f"  Warning: Could not read {fpath}, skipping: {e}")
             else:
-                record.compression_type = COMPRESSION_UNCOMPRESSED_V5
-                record.size = 0
+                unmatched_files.append(record.filename)
 
-            self.records.append(record)
+        if unmatched_files:
+            print(f"  Warning: {len(unmatched_files)} original files not found in extracted directory")
+            for fname in unmatched_files[:5]:
+                print(f"    - {fname}")
+            if len(unmatched_files) > 5:
+                print(f"    ... and {len(unmatched_files) - 5} more")
 
-        print(f"Loaded {len(self.records)} files with {len(self.file_extensions)} extensions")
-        print(f"Extensions: {', '.join(self.file_extensions)}")
+        # Handle any new extensions found in extracted files that weren't in original
+        original_exts = set(self.file_extensions)
+        new_exts = found_exts - original_exts
+        if new_exts:
+            print(f"  Note: Found new extensions not in original: {sorted(new_exts)}")
+            # Add new extensions to the end of the list (they won't have matching records)
+
+        print(f"Updated {matched_count} file records with extracted data")
 
     def load_from_header(self, original_header_path: str) -> None:
         """Load file metadata from original header (for preserving structure)."""
@@ -128,7 +152,7 @@ class DFPFRepacker:
             # If compressed, decompress for repacking
             if rec.compressed and rec.compression_type == COMPRESSION_ZLIB_V5:
                 try:
-                    record.data = zlib.decompress(record.data, zlib.MAX_WBITS)
+                    record.data = zlib.decompress(record.data, 15)
                     record.uncompressed_size = len(record.data)
                 except zlib.error:
                     print(f"  Warning: Could not decompress {rec.full_filename}, storing as-is")
@@ -262,28 +286,33 @@ class DFPFRepacker:
 
 
 def main():
-    if len(sys.argv) < 3:
-        print("Usage: python dfpf_repack.py <original_header.~h> <extracted_dir> [output_name]")
-        print()
-        print("Example:")
-        print("  python dfpf_repack.py ../../Win/Packs/Man_Script.~h ./Man_Script_extracted Man_Script_new")
-        sys.exit(1)
+    parser = argparse.ArgumentParser(
+        description="DFPF V5 Repacker for Brutal Legend - Repacks extracted files into .~h/.~p pair",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Example:
+    python dfpf_repack.py ../../Win/Packs/Man_Script.~h ./Man_Script_extracted Man_Script_new
+        """
+    )
+    parser.add_argument("original_header", help="Path to original .~h header file")
+    parser.add_argument("extracted_dir", help="Path to extracted files directory")
+    parser.add_argument("output_name", nargs="?", help="Output name (default: <extracted_dir>_repacked)")
 
-    original_header = sys.argv[1]
-    extracted_dir = sys.argv[2]
-    output_name = sys.argv[3] if len(sys.argv) > 3 else None
+    args = parser.parse_args()
 
-    if output_name is None:
-        output_name = Path(extracted_dir).stem + "_repacked"
+    if args.output_name is None:
+        output_name = Path(args.extracted_dir).stem + "_repacked"
+    else:
+        output_name = args.output_name
 
     try:
         repacker = DFPFRepacker(output_name)
 
         # Load metadata from original header to preserve structure
-        repacker.load_from_header(original_header)
+        repacker.load_from_header(args.original_header)
 
         # Load actual file data from extracted directory
-        repacker.load_from_extracted(extracted_dir)
+        repacker.load_from_extracted(args.extracted_dir)
 
         # Repack
         repacker.repack(output_name)
