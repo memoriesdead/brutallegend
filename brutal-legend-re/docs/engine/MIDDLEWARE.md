@@ -30,7 +30,7 @@
 - using custom wrapper (.AnimResource, .AnimResource.header)
 - version unconfirmed
 - possibly uses Gzip/ZLib Compression
-- [ANIM_FORMAT.md](../formats/ANIM_FORMAT.md)
+- See [ANIM_FORMAT.md](../formats/ANIM_FORMAT.md)
 
 ### Havok Versions found
 - Havok-3.1.0	
