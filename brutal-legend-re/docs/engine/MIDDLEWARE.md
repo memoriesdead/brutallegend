@@ -38,7 +38,8 @@
 - Havok-5.0.0-b1	
 - Havok-5.0.0-r1	
 - Havok-5.1.0-r1	
-- Havok-4.0.0-b1	
+- Havok-4.0.0-b1
+- Havok-6.1.0-r1
 
 ## Unconfirmed Middleware
 
