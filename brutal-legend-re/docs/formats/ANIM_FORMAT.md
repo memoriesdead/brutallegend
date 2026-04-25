@@ -19,8 +19,8 @@ Animation and skeleton data in Brutal Legend is stored within DFPF V5 containers
 | .ComboPose | 1 | Combat pose data |
 | .Stance | 3 | Idle/stance poses |
 | .AnimMap | 1 | Animation mapping/listing |
-| .AnimResource | Animation Data |
-| .AnimResource.header | Animation data header |
+| .AnimResource | ? | Animation Data |
+| .AnimResource.header | ? | Animation data header |
 
 ## Animation System
 
