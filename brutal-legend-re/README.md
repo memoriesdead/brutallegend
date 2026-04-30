@@ -29,7 +29,7 @@ A community-driven effort to:
 | Component | Technology |
 |-----------|------------|
 | Engine | Buddha (Double Fine proprietary) |
-| Middleware | FMOD (audio), Havok (physics), Scaleform (UI), Bink (video) |
+| Middleware | FMOD (audio), Havok (physics), Havok (Animations), Scaleform (UI), Bink (video) |
 | Container Format | DFPF (.~h/.~p pairs) |
 | Scripting | Lua |
 | Platform | Windows (primary), Steam PC version |
