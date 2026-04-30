@@ -177,6 +177,22 @@ The following functions were identified via Ghidra analysis of `BrutalLegend.exe
 | `0x00436c70` | `Skinning::ApplyMatrices` | **The Skin** | Multiplies final bone matrices by vertex weights to transform the mesh. |
 | `0x00432510` | `Skinning::BatchProcess` | **Batcher** | Processes vertices in batches for performance optimization. |
 | `0x00432790` | `Skinning::Finalize` | **Finalizer** | Finalizes the skinning process for the current frame. |
+| `0x0041af10` | `Skeleton::SkinningMatricesJob::Constructor` | **Job Init** | Initializes the multi-threaded skinning job. Sets vtable to `Skeleton::SkinningMatricesJob` and clears state. |
+| `0x0041ad34` | `Skeleton::SkinningMatricesJob::Init` | **Job Setup** | Assigns the vtable and likely sets up initial parameters for the skinning matrix calculation. |
+
+#### Skinning Job Structure (`Skeleton::SkinningMatricesJob`)
+*Identified via RTTI and Constructor analysis.*
+- **Base Class:** `TaskDispatcher::ThreadTask` (Multi-threaded execution).
+- **Global Flags:**
+  - `g_bSkinning` (`0x00ea7234`): Master toggle for all skinning calculations.
+  - `g_bRigidSkinning` (`0x00ea7240`): Forces rigid (1-bone) skinning. Default value is `4`.
+- **Output Buffer:** `g_avSkinningMatrices` (`0x00ea721c`) likely holds the final calculated bone palettes.
+
+#### Skinning Logic Analysis
+*Decompiled from `FUN_0065b260` and `FUN_0065ba90`.*
+- **Standard Path (`FUN_0065b260`):** Handles weighted skinning. Iterates through mesh parts, performs culling, and prepares a multi-bone matrix palette for the GPU. Used for characters and flexible objects.
+- **Rigid Path (`FUN_0065ba90`):** A simplified path for rigid objects. Assigns a mesh part to a single bone, skipping weighted averaging. Used for weapons, armor, or when `g_bRigidSkinning` is enabled for debugging.
+
 
 ### 5. Integration & Locomotion Layer
 *Higher-level systems managing animation states, blending, and physics integration.*
