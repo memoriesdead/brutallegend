@@ -175,6 +175,19 @@ The following functions were identified via Ghidra analysis of `BrutalLegend.exe
 | `0x00432510` | `Skinning::BatchProcess` | **Batcher** | Processes vertices in batches for performance optimization. |
 | `0x00432790` | `Skinning::Finalize` | **Finalizer** | Finalizes the skinning process for the current frame. |
 
+### 5. Integration & Locomotion Layer
+*Higher-level systems managing animation states, blending, and physics integration.*
+
+| Address | Function/Class Name | Role | Description |
+| :--- | :--- | :--- | :--- |
+| `0x0090a4c0` | `CoLocomotionAnimation` | **Locomotion** | Complex locomotion system blending walk/run/strafe animations. |
+| `0x009d14a0` | `CoLocomotionSimpleAnimation` | **Locomotion** | Simplified locomotion for NPCs or props. |
+| `0x00913f70` | `CoConstructable::Construction_Animation` | **Building** | Handles animations for building construction/destruction. |
+| `0x0099e260` | `Mount/Dismount Animation Range` | **Mounts** | Defines procedural animation windows for mounting/dismounting. |
+| `0x009fa6f0` | `FiringAnimationAimingLockout` | **Combat** | Locks out aiming controls during specific phases of firing animations. |
+| `0x00eaeb78` | `m_pRagdollToBindpose` | **Physics** | Maps ragdoll physics bodies back to animation bones for seamless transitions. |
+| `0x00de67d0` | `Havok License Check` | **System** | Runtime validation of Havok middleware licenses. |
+
 ---
 
 ## Data Structures & Memory Maps
@@ -187,15 +200,48 @@ Extracted from live memory at address `0x2141C29C`. This array maps Animation Tr
 
 *Note: Track 0 maps to Bone 1 (Pelvis), Track 1 to Bone 3 (Spine1), etc.*
 
+### Resource Management System
+Brutal Legend uses a sophisticated resource manager (`AnimResourceRsMgr`) to handle animation loading and lookup.
+
+*   **Name-Based Lookup:** `HashTable<Name, RsRef<AnimResource>>` allows requesting animations by string name (e.g., `"relaxed_trot"`).
+*   **Rig-Based Lookup:** `HashTable<RsWeakRef<Rig>, RsRef<AnimResource>>` ensures animations are only played on compatible skeletons.
+*   **Reference Counting:** Uses `RsRef` (strong) and `RsWeakRef` (weak) to manage memory lifecycle and prevent leaks.
+*   **Combo Trees:** Stored as `Array<Tuple<Float, RsRef<AnimResource>, Bool>>` where Float is blend weight/timing, RsRef is the animation, and Bool is a flag (e.g., `IsLooping`).
+
 ### Class Hierarchy (RTTI)
 Confirmed via RTTI strings in the executable:
-*   `hkaAnimation` (Base)
-*   `hkaDeltaCompressedAnimation` (Most Common)
-*   `hkaWaveletCompressedAnimation` (High Compression)
-*   `hkaSplineCompressedAnimation` (Spline-based)
-*   `CoLocomotionAnimation` (Movement Blending)
-*   `PoseAnimation` (Static Poses)
-*   `ComboPose` (Combat Sequences)
+
+#### Havok Core Classes
+    *   `hkaAnimation` (Base)
+    *   `hkaDeltaCompressedAnimation` (Most Common)
+    *   `hkaWaveletCompressedAnimation` (High Compression)
+    *   `hkaSplineCompressedAnimation` (Spline-based)
+    *   `hkaInterleavedUncompressedAnimation` (Raw Data)
+    *   `hkaAnimationBinding` (Links Anim to Skeleton)
+    *   `hkaAnimationContainer` (Holds multiple anims)
+
+#### Double Fine Wrapper Classes
+    *   `SkeletalAnimation` (Base Wrapper)
+    *   `CompressedSkeletalAnimation`
+    *   `UncompressedSkeletalAnimation`
+    *   `PoseAnimation` (Static Poses)
+    *   `CoLocomotionAnimation` (Movement Blending)
+    *   `CoLocomotionSimpleAnimation` (Simplified Locomotion)
+    *   `CoConstructable::Construction_Animation` (Building Anims)
+
+#### Attribute & Priority System
+*   `ReferenceAttribute<enum_AnimationPriority>`: Manages blending priorities (Face > Body > Root).
+*   `AnimationPriority`: Enum defining layer importance.
+
+### Animation State Machine (`AnimationType`)
+Defined in RTTI at `0x00eb0a98`. Controls blending and looping behavior.
+
+| ID | Name | Behavior |
+| :--- | :--- | :--- |
+| `0` | `ANIMATION_None` | No active animation. |
+| `1` | `ANIMATION_Looping` | Standard loop with blending (e.g., Idle, Run). |
+| `2` | `ANIMATION_AlphaRamp` | Fades in/out via alpha blending (Effects/UI). |
+| `3` | `ANIMATION_LoopingNoBlend` | Hard-cut looping (no blending with other layers). |
 
 ---
 
@@ -212,6 +258,8 @@ Initial attempts to play animations resulted in twisted meshes.
 3.  Located the `AnimationJob::Execute` function that drives the update loop.
 4.  Mapped the full `CoSkeleton` lifecycle from creation to job submission.
 5.  Identified the thread synchronization primitives (`Lock`/`Unlock`) ensuring safe multi-threaded access.
+6.  Discovered the `AnimResourceRsMgr` and hash-table lookup systems for resource management.
+
 
 ## References
 
