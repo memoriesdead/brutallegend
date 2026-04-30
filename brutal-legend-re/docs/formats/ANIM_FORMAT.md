@@ -121,46 +121,97 @@ Animations are extracted along with other DFPF assets using:
 
 ## Reverse Engineering: Animation Pipeline
 
-The following functions were identified via Ghidra analysis of `BrutalLegend.exe`. They represent the flow from high-level game logic down to low-level Havok math and vertex skinning.
+The following functions were identified via Ghidra analysis of `BrutalLegend.exe` and memory dumps. They represent the flow from high-level game logic down to low-level Havok math and vertex skinning.
 
 ### 1. Game Logic Layer (`CoSkeleton`)
 *Brutal Legend's custom wrapper around Havok objects.*
 
-| Address | Function Name | Role |
-| :--- | :--- | :--- |
-| `0x00a89af0` | `CoSkeleton::Constructor` | Initializes a new skeleton instance, sets default values, and assigns the VFTABLE. |
-| `0x00a89bf0` | `CoSkeleton::Destructor` | Cleans up memory and releases references when a character is removed. |
-| `0x00a89f50` | `CoSkeleton::InitializeState` | Allocates pose buffer memory and links it to `hkaAnimatedSkeleton`. Called on animation start. |
-| `0x00a8a530` | `CoSkeleton::SyncState` | Checks for state changes (e.g., Walk → Run) and updates internal caches. |
-| `0x00a8a580` | `CoSkeleton::CleanupState` | Frees pose buffers and resets pointers when an animation stops. |
-| `0x00a8b230` | `CoSkeleton::CreateUpdateJob` | **Job Factory.** Creates a `TaskInstance` and assigns the worker thread function (`0x00a8b770`). |
-| `0x006b40a0` | `CoSkeleton::SubmitSkinningJob` | Submits the final skinning job to the multi-threaded system to move mesh vertices. |
+| Address | Function Name | Role | Description |
+| :--- | :--- | :--- | :--- |
+| `0x00a89af0` | `CoSkeleton::Constructor` | **Initialization** | Initializes a new skeleton instance, sets default values, and assigns the VFTABLE. |
+| `0x00a89bf0` | `CoSkeleton::Destructor` | **Cleanup** | Cleans up memory and releases references when a character is removed. |
+| `0x00a89f50` | `CoSkeleton::InitializeState` | **State Creation** | Allocates pose buffer memory and links it to `hkaAnimatedSkeleton`. Called on animation start. |
+| `0x00a8a530` | `CoSkeleton::SyncState` | **State Sync** | Checks for state changes (e.g., Walk → Run) and updates internal caches. |
+| `0x00a8a580` | `CoSkeleton::CleanupState` | **State Cleanup** | Frees pose buffers and resets pointers when an animation stops. |
+| `0x00a8b230` | `CoSkeleton::CreateUpdateJob` | **Job Factory** | Creates a `TaskInstance` and assigns the worker thread function (`0x00a8b770`). |
+| `0x008449a0` | `ThreadPool::SubmitTask` | **Job Signal** | Signals the thread pool that the animation job is ready for execution. |
+| `0x006b40a0` | `CoSkeleton::SubmitSkinningJob` | **Job Submission** | Submits the final skinning job to the multi-threaded system to move mesh vertices. |
+| `0x00a8a4b0` | `CoSkeleton::LinkComponent` | **Linking** | Links the `CoSkeleton` to other components (like Physics) in a priority-based list. |
+| `0x00a8a4f0` | `CoSkeleton::UnlinkComponent` | **Unlinking** | Removes the `CoSkeleton` from the component linked list. |
+| `0x00644490` | `AnimLineAttribute::Register` | **Dialogue** | Registers voice line/facial animation metadata (SoundCueName, BodyAnimJoint). |
+| `0x004baaa0` | `ComponentManager::RemoveComponent` | **System** | Generic manager for removing components from an actor. |
+| `0x0041aab0` | `MemoryAllocator` | **System** | Allocates (`0x0041aab0`) and Deallocates (`0x0041af50`) heap memory for skeletons. |
+| `0x004426f0` | `ThreadSync` | **System** | Enters (`0x004426f0`) and Exits (`0x00442610`) critical sections to prevent race conditions. |
 
 ### 2. The "Captain" Layer (Update Loop)
 *The code that executes every frame to advance bone positions.*
 
-| Address | Function Name | Role |
-| :--- | :--- | :--- |
-| `0x00a8b770` | `AnimationJob::Execute` | **The Captain.** Iterates through bones/tracks, calling time-advance and sampling functions. |
-| `0x00a8bdd0` | `Track::AdvanceTime` | Updates the internal "clock" for specific animation tracks using delta time. |
-| `0x00a8c110` | `Track::SamplePose` | Requests new bone positions from Havok at the current time; returns a "dirty" mask. |
+| Address | Function Name | Role | Description |
+| :--- | :--- | :--- | :--- |
+| `0x00a8b770` | `AnimationJob::Execute` | **The Captain** | Iterates through bones/tracks, calling time-advance and sampling functions. |
+| `0x00a8bdd0` | `Track::AdvanceTime` | **Time Stepper** | Updates the internal "clock" for specific animation tracks using delta time. |
+| `0x00a8c110` | `Track::SamplePose` | **Pose Sampler** | Requests new bone positions from Havok at the current time; returns a "dirty" mask. |
+| `0x00a8b7f0` | `AnimationJob::Cleanup` | **Job Cleanup** | Frees resources used by the animation job after execution. |
+| `0x00a8c2c0` | `Job::Finalize` | **Job Finalizer** | Resets the job's vtable from `ThreadTask` to `Runnable` upon completion. |
 
 ### 3. Havok Engine Layer (Internal Math)
 *Low-level compression and decomposition logic (Addresses `0x00dc...` / `0x00dd...`).*
 
-| Address | Function Name | Role |
-| :--- | :--- | :--- |
-| `0x00dccfb0` | `hkaDeltaCompressedAnimation::samplePartialPose` | **The Sampler.** Calculates final bone transforms for a specific moment in time. |
-| `0x00dd7b00` | `Havok::DecodeBoneTransform` | **The Decoder.** Decodes compressed quaternions/floats into usable bone rotation/position data. |
-| `0x00dcca40` | `Havok::DecompressDeltaChunk` | **The Engine.** Performs heavy-lifting delta-decompression and interpolation between keyframes. |
+| Address | Function Name | Role | Description |
+| :--- | :--- | :--- | :--- |
+| `0x00dccfb0` | `hkaDeltaCompressedAnimation::samplePartialPose` | **The Sampler** | Calculates final bone transforms for a specific moment in time. |
+| `0x00dd7b00` | `Havok::DecodeBoneTransform` | **The Decoder** | Decodes compressed quaternions/floats into usable bone rotation/position data. |
+| `0x00dcca40` | `Havok::DecompressDeltaChunk` | **The Engine** | Performs heavy-lifting delta-decompression and interpolation between keyframes. |
+| `0x00dd51b0` | `Havok::DecompressWaveletChunk` | **Wavelet Decoder** | Handles `hkaWaveletCompressedAnimation`. Uses wavelet transforms for higher compression. |
+| `0x00dd5030` | `Havok::WaveletMathCore` | **Wavelet Core** | Core mathematical operations for wavelet reconstruction. |
+| `0x00433130` | `Math::NormalizeQuaternions` | **Math Helper** | SIMD-optimized function that normalizes a batch of quaternions. |
 
 ### 4. Rendering Layer (Vertex Skinning)
 *Applies bone movements to the 3D model mesh.*
 
-| Address | Function Name | Role |
-| :--- | :--- | :--- |
-| `0x00436c70` | `Skinning::ApplyMatrices` | **The Skin.** Multiplies final bone matrices by vertex weights to transform the mesh. |
-| `0x00433130` | `Skinning::BlendVertices` | Helper function for blending multiple bone influences on a single vertex. |
+| Address | Function Name | Role | Description |
+| :--- | :--- | :--- | :--- |
+| `0x00436c70` | `Skinning::ApplyMatrices` | **The Skin** | Multiplies final bone matrices by vertex weights to transform the mesh. |
+| `0x00432510` | `Skinning::BatchProcess` | **Batcher** | Processes vertices in batches for performance optimization. |
+| `0x00432790` | `Skinning::Finalize` | **Finalizer** | Finalizes the skinning process for the current frame. |
+
+---
+
+## Data Structures & Memory Maps
+
+### The Track Map (`transformTrackToBoneIndices`)
+Extracted from live memory at address `0x2141C29C`. This array maps Animation Tracks to Skeleton Bone Indices. It is critical for correctly applying animation data to the rig.
+
+**Array Content (UInt16 Little-Endian):**
+`1, 3, 3, 5, 7, 8, 9, 9, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38...`
+
+*Note: Track 0 maps to Bone 1 (Pelvis), Track 1 to Bone 3 (Spine1), etc.*
+
+### Class Hierarchy (RTTI)
+Confirmed via RTTI strings in the executable:
+*   `hkaAnimation` (Base)
+*   `hkaDeltaCompressedAnimation` (Most Common)
+*   `hkaWaveletCompressedAnimation` (High Compression)
+*   `hkaSplineCompressedAnimation` (Spline-based)
+*   `CoLocomotionAnimation` (Movement Blending)
+*   `PoseAnimation` (Static Poses)
+*   `ComboPose` (Combat Sequences)
+
+---
+
+## Challenges & Solutions
+
+### The "Twisting" Issue
+Initial attempts to play animations resulted in twisted meshes.
+*   **Cause:** Mismatch between the game's **Bind Pose** and the importer's default pose, combined with treating **Delta-Compressed Integers** as Absolute Quaternions.
+*   **Solution:** Implement Delta Accumulation (summing integers over time) and applying the result relative to the Bind Pose. Additionally, Track 0 is often Root Motion (Translation) and should be skipped for skeletal rotation.
+
+### Key Breakthroughs
+1.  Identified the `transformTrackToBoneIndices` array in memory.
+2.  Distinguished between `StRecomposeD` (Delta) and `StRecomposeW` (Wavelet) compression.
+3.  Located the `AnimationJob::Execute` function that drives the update loop.
+4.  Mapped the full `CoSkeleton` lifecycle from creation to job submission.
+5.  Identified the thread synchronization primitives (`Lock`/`Unlock`) ensuring safe multi-threaded access.
 
 ## References
 
