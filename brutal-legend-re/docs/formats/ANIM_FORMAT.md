@@ -165,6 +165,7 @@ The following functions were identified via Ghidra analysis of `BrutalLegend.exe
 | `0x00dcca40` | `Havok::DecompressDeltaChunk` | **The Engine** | Performs heavy-lifting delta-decompression and interpolation between keyframes. |
 | `0x00dd51b0` | `Havok::DecompressWaveletChunk` | **Wavelet Decoder** | Handles `hkaWaveletCompressedAnimation`. Uses wavelet transforms for higher compression. |
 | `0x00dd5030` | `Havok::WaveletMathCore` | **Wavelet Core** | Core mathematical operations for wavelet reconstruction. |
+| `0x00dd1d10` | `Havok::DecompressSplineChunk` | **Spline Decoder** | Handles `hkaSplineCompressedAnimation`. Reconstructs bone transforms from spline curves (likely Hermite/Catmull-Rom). Includes quaternion normalization and track-specific evaluation. |
 | `0x00433130` | `Math::NormalizeQuaternions` | **Math Helper** | SIMD-optimized function that normalizes a batch of quaternions. |
 | `0x0040ea40` | `AnimCompressionParams::Register` | **System Init** | Registers compression settings (bit-depths, tolerances) used by Havok decoders. |
 
@@ -190,6 +191,47 @@ The following functions were identified via Ghidra analysis of `BrutalLegend.exe
 | `0x00eaeb78` | `m_pRagdollToBindpose` | **Physics** | Maps ragdoll physics bodies back to animation bones for seamless transitions. |
 | `0x00de67d0` | `Havok License Check` | **System** | Runtime validation of Havok middleware licenses. |
 
+### 6. Specialized Systems: Foot IK & Kamikaze
+*Specific subsystems identified via RTTI and string analysis.*
+
+#### A. Foot Inverse Kinematics (Foot IK)
+*Ensures character feet adhere to terrain geometry. Controlled by `BlendNode_FootIK`.*
+
+| Address/String | Identifier | Role | Description |
+| :--- | :--- | :--- | :--- |
+| `0x00ed6d3c` | `LegIKs` | **Config** | Master container for leg IK settings. |
+| `0x00ed92c8` | `EnableLegIK` | **Toggle** | Enables/disables leg IK for a specific stance. |
+| `0x00ed6d60` | `DisableFootIK` | **Toggle** | Global override to disable foot IK calculations. |
+| `0x00ed6d90` | `UseCheapFootIK` | **Optimization** | Enables cheaper raycasts for small/AI characters. |
+| `0x00ed6df4` | `FootIKFootSteps` | **Audio** | Procedurally generates footstep sounds from IK data. |
+| `0x00ed6e44` | `FootIKFootStepsOnly` | **Audio Only** | Generates sounds/effects but disables actual foot positioning. |
+| `0x00ed6ee0` | `FootIKLODScale` | **LOD** | Scales IK precision based on screen-space size. |
+| `0x00fbf9c8` | `.?AVBlendNode_FootIK@@` | **RTTI Class** | The C++ class responsible for executing the Foot IK blend. |
+| `0x00ef8830` | `kAP_FootIK` | **State Tag** | Animation state/action point tag for Foot IK activation. |
+
+#### B. Kamikaze Units (`CoKamikazeMount`)
+*Logic for self-destructing units, including AI/Player control states and visual effects.*
+
+| Address/String | Identifier | Role | Description |
+| :--- | :--- | :--- | :--- |
+| `0x00eebe78` | `CoKamikazeMount` | **Base Class** | Main component for kamikaze behavior. |
+| `0x00eebe9c` | `AutoPilotKamikaze` | **State** | AI-controlled autonomous kamikaze mode. |
+| `0x00eebec0` | `AIDrivingKamikaze` | **State** | AI-driven vehicle/unit control. |
+| `0x00eebee8` | `PlayerDrivingKamikaze` | **State** | Player-controlled kamikaze mode. |
+| `0x00eebf50` | `KamikazeSelfDestructProto` | **Logic** | Defines damage and destruction parameters. |
+| `0x00eebfd4` | `KamikazeEffect` | **VFX** | Visual effect played during kamikaze mode. |
+| `0x00fb8bc8` | `.?AVCoKamikazeMount@@` | **RTTI Class** | C++ class identifier for the Kamikaze mount. |
+
+#### C. Trike Units (RTS/Strategy Elements)
+*Event triggers and UI strings related to "Trike" squadrons.*
+
+| String ID | Identifier | Context |
+| :--- | :--- | :--- |
+| `kULE_A10_TrikeSquadBuilt` | **Event** | Triggered when a Trike squad is constructed. |
+| `kULE_A10_TrikeAttacked` | **Event** | Triggered when a Trike squad takes damage. |
+| `kULE_A10_TrikeUnitBaseUpgrade` | **Event** | Triggered upon base upgrades affecting Trikes. |
+| `kULE_VikingPaintUpgrade` | **Event** | Cosmetic upgrade event for Viking units. |
+
 ---
 
 ## Data Structures & Memory Maps
@@ -197,7 +239,7 @@ The following functions were identified via Ghidra analysis of `BrutalLegend.exe
 ### The AnimResource File Format
 Brutal Legend uses a custom Double Fine wrapper (`AnimResource`) around standard Havok data. 
 
-#### Header Structure (Offsets `0x00` - `0x40`)  (may not be correct) 
+#### Header Structure (Offsets `0x00` - `0x40`) (may not be correct) 
 | Offset | Size | Type | Description |
 | :--- | :--- | :--- | :--- |
 | `0x00` | 4 | ASCII | Magic Bytes: `"dnap"` |
@@ -207,7 +249,7 @@ Brutal Legend uses a custom Double Fine wrapper (`AnimResource`) around standard
 | `0x0E` | 2 | UInt16 | Track Count |
 | `0x10` | 2 | UInt16 | Rotation Track Count |
 | `0x12` | 2 | UInt16 | Translation Track Count |
-| `0x14` | 2 | UInt16 | Compression Type (`1`=Uncompressed, `2`=Delta, `3`=Wavelet) |
+| `0x14` | 2 | UInt16 | Compression Type (`1`=Uncompressed, `2`=Delta, `3`=Wavelet, `4`=Spline) |
 | `0x18` | 4 | UInt32 | Data Offset (Start of compressed bone data) |
 
 #### Track Map (`transformTrackToBoneIndices`)
@@ -221,35 +263,37 @@ Located immediately after the header (typically offset `0x40`). This array maps 
 ### Resource Management System
 Brutal Legend uses a sophisticated resource manager (`AnimResourceRsMgr`) to handle animation loading and lookup.
 
-*   **Name-Based Lookup:** `HashTable<Name, RsRef<AnimResource>>` allows requesting animations by string name (e.g., `"relaxed_trot"`).
-*   **Rig-Based Lookup:** `HashTable<RsWeakRef<Rig>, RsRef<AnimResource>>` ensures animations are only played on compatible skeletons.
-*   **Reference Counting:** Uses `RsRef` (strong) and `RsWeakRef` (weak) to manage memory lifecycle and prevent leaks.
-*   **Combo Trees:** Stored as `Array<Tuple<Float, RsRef<AnimResource>, Bool>>` where Float is blend weight/timing, RsRef is the animation, and Bool is a flag (e.g., `IsLooping`).
+* **Name-Based Lookup:** `HashTable<Name, RsRef<AnimResource>>` allows requesting animations by string name (e.g., `"relaxed_trot"`).
+* **Rig-Based Lookup:** `HashTable<RsWeakRef<Rig>, RsRef<AnimResource>>` ensures animations are only played on compatible skeletons.
+* **Reference Counting:** Uses `RsRef` (strong) and `RsWeakRef` (weak) to manage memory lifecycle and prevent leaks.
+* **Combo Trees:** Stored as `Array<Tuple<Float, RsRef<AnimResource>, Bool>>` where Float is blend weight/timing, RsRef is the animation, and Bool is a flag (e.g., `IsLooping`).
 
 ### Class Hierarchy (RTTI)
 Confirmed via RTTI strings in the executable:
 
 #### Havok Core Classes
-*   `hkaAnimation` (Base)
-*   `hkaDeltaCompressedAnimation` (Most Common)
-*   `hkaWaveletCompressedAnimation` (High Compression)
-*   `hkaSplineCompressedAnimation` (Spline-based)
-*   `hkaInterleavedUncompressedAnimation` (Raw Data)
-*   `hkaAnimationBinding` (Links Anim to Skeleton)
-*   `hkaAnimationContainer` (Holds multiple anims)
+* `hkaAnimation` (Base)
+* `hkaDeltaCompressedAnimation` (Most Common)
+* `hkaWaveletCompressedAnimation` (High Compression)
+* `hkaSplineCompressedAnimation` (Spline-based)
+* `hkaInterleavedUncompressedAnimation` (Raw Data)
+* `hkaAnimationBinding` (Links Anim to Skeleton)
+* `hkaAnimationContainer` (Holds multiple anims)
 
 #### Double Fine Wrapper Classes
-*   `SkeletalAnimation` (Base Wrapper)
-*   `CompressedSkeletalAnimation`
-*   `UncompressedSkeletalAnimation`
-*   `PoseAnimation` (Static Poses)
-*   `CoLocomotionAnimation` (Movement Blending)
-*   `CoLocomotionSimpleAnimation` (Simplified Locomotion)
-*   `CoConstructable::Construction_Animation` (Building Anims)
+* `SkeletalAnimation` (Base Wrapper)
+* `CompressedSkeletalAnimation`
+* `UncompressedSkeletalAnimation`
+* `PoseAnimation` (Static Poses)
+* `CoLocomotionAnimation` (Movement Blending)
+* `CoLocomotionSimpleAnimation` (Simplified Locomotion)
+* `CoConstructable::Construction_Animation` (Building Anims)
+* `CoKamikazeMount` (Kamikaze Unit Logic)
+* `BlendNode_FootIK` (Foot IK Processing)
 
 #### Attribute & Priority System
-*   `ReferenceAttribute<enum_AnimationPriority>`: Manages blending priorities (Face > Body > Root).
-*   `AnimationPriority`: Enum defining layer importance.
+* `ReferenceAttribute<enum_AnimationPriority>`: Manages blending priorities (Face > Body > Root).
+* `AnimationPriority`: Enum defining layer importance.
 
 ### Animation State Machine (`AnimationType`)
 Defined in RTTI at `0x00eb0a98`. Controls blending and looping behavior.
@@ -263,12 +307,11 @@ Defined in RTTI at `0x00eb0a98`. Controls blending and looping behavior.
 
 ### Animation Events
 Embedded triggers for gameplay effects, identified by these strings:
-*   `AnimEvent_PlaySound`: Triggers audio cues.
-*   `AnimEvent_Footstep`: Syncs footfalls with terrain.
-*   `AnimEvent_SpawnParticles`: Visual effects (sparks, dust).
-*   `AnimEvent_GoRagdoll`: Transitions to physics simulation.
-*   `AnimEvent_HideAttachment`: Hides weapons/items during specific poses.
-
+* `AnimEvent_PlaySound`: Triggers audio cues.
+* `AnimEvent_Footstep`: Syncs footfalls with terrain.
+* `AnimEvent_SpawnParticles`: Visual effects (sparks, dust).
+* `AnimEvent_GoRagdoll`: Transitions to physics simulation.
+* `AnimEvent_HideAttachment`: Hides weapons/items during specific poses.
 ---
 
 ## Challenges & Solutions
