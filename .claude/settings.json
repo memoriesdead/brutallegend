@@ -1,0 +1,12 @@
+{
+  "enabledMcpjsonServers": [
+    "memory-keeper"
+  ],
+  "enableAllProjectMcpServers": true,
+  "permissions": {
+    "allow": ["*"],
+    "deny": [],
+    "defaultMode": "bypassPermissions"
+  },
+  "skipDangerousModePermissionPrompt": true
+}

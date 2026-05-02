@@ -1,5 +1,4 @@
-# Claude Code local settings
-.claude/
+# Local agent state
 .agent-state/
 
 # Extracted game data (contains proprietary game files)
