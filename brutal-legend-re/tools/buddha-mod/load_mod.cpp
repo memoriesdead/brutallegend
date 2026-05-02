@@ -229,10 +229,59 @@ int main(int argc, char* argv[])
 
     if (!found)
     {
-        fprintf(stderr, "[load_mod] Brutal Legend is not running.\n");
-        fprintf(stderr, "Start the game first, then run this injector.\n");
-        fprintf(stderr, "Alternatively, launch the game with: load_mod.exe\n");
-        return 1;
+        printf("[load_mod] Game not running. Launching Brutal Legend...\n");
+
+        // Launch the game
+        STARTUPINFOA si = { sizeof(STARTUPINFOA) };
+        PROCESS_INFORMATION pi = { 0 };
+        si.dwFlags = STARTF_USESHOWWINDOW;
+        si.wShowWindow = SW_SHOWNORMAL;
+
+        if (!CreateProcessA(gamePath, NULL, NULL, NULL, FALSE,
+            CREATE_DEFAULT_ERROR_MODE | NORMAL_PRIORITY_CLASS,
+            NULL, NULL, &si, &pi))
+        {
+            print_error("CreateProcess failed", GetLastError());
+            return 1;
+        }
+
+        CloseHandle(pi.hThread);
+
+        // Wait for process to appear (up to 30 seconds)
+        printf("Waiting for game to start...\n");
+        int wait_count = 0;
+        while (wait_count < 60)
+        {
+            Sleep(500);
+            HANDLE hSnap2 = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+            if (hSnap2 != INVALID_HANDLE_VALUE)
+            {
+                PROCESSENTRY32W pe2 = { sizeof(PROCESSENTRY32W) };
+                for (BOOL ok = Process32FirstW(hSnap2, &pe2); ok; ok = Process32NextW(hSnap2, &pe2))
+                {
+                    if (_wcsicmp(pe2.szExeFile, filePart) == 0)
+                    {
+                        pid = pe2.th32ProcessID;
+                        found = TRUE;
+                        CloseHandle(hSnap2);
+                        break;
+                    }
+                }
+                CloseHandle(hSnap2);
+            }
+            if (found) break;
+            wait_count++;
+        }
+
+        if (!found)
+        {
+            fprintf(stderr, "[load_mod] Game failed to start within 30 seconds.\n");
+            CloseHandle(pi.hProcess);
+            return 1;
+        }
+
+        printf("Game started with PID: %lu\n", pid);
+        CloseHandle(pi.hProcess);
     }
 
     printf("Found process PID: %lu\n", pid);

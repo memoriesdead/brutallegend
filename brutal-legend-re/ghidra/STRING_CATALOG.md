@@ -1,0 +1,1288 @@
+# BrutalLegend.exe String Catalog
+
+**Total ASCII strings:** 57405
+**Total Unicode strings:** 466
+
+## Function Names (5383)
+
+- `_^[]`
+- `QSVW`
+- `dSVW`
+- `T$$W`
+- `VhXA`
+- `VhxA`
+- `9:tRA`
+- `_^[Y]`
+- `_^[3`
+- `IubVW`
+- `SQRW`
+- `_YSS`
+- `_PVj`
+- `@(RW`
+- `@PSVW`
+- `t3CA`
+- `h0JA`
+- `@xSVW`
+- `t-VW`
+- `@SVW`
+- `L$dSRPW`
+- `L$XRPSW`
+- `L$xRPSW`
+- `T$tVQW`
+- `xPVW`
+- `90t:A`
+- `j,VW`
+- `_ttc`
+- `_^Y]`
+- `_^[u`
+- `L$$A`
+- `L$0W`
+- `TSVW`
+- `9:t/A`
+- `K(VW`
+- `T$(W`
+- `8SVW`
+- `]$VW`
+- `90t8A`
+- `RHSW`
+- `_[^]`
+- `tASW`
+- `tyNA`
+- `PQVW`
+- `txSW`
+- `tJVW`
+- `u(WW`
+- `vtSVW`
+- `vUVW`
+- `t*j/W`
+- `9HDtW`
+- `Pj/W`
+- `SRPW`
+- `QRSW`
+- `QRPW`
+- `~/SVW`
+- `vMSVW`
+- `tISVW`
+- `@,RW`
+- `t0SVW`
+- `u8j\W`
+- `F0#F4W`
+- `Vv>W`
+- `t*NA`
+- `PhpW`
+- `t=QRPW`
+- `_X^Y]`
+- `PQSW`
+- `_X_^[]`
+- `_^[t`
+- `C(PW`
+- `v\SVW`
+- `@8RW`
+- `4SVW`
+- `T$ QVPRSW`
+- `L$(A`
+- `$SVW`
+- `_T_3`
+- `9:t0A`
+- `R<PW`
+- `C8VW`
+- `V8SW`
+- `RPQW`
+- `PQRW`
+- `,SVW`
+- `T$ RPW`
+- `R8PW`
+- `K@VW`
+- `CDVW`
+- `P SW`
+- `D$`PW`
+- `P8QW`
+- `Iu>VW`
+- `L$ QRW`
+- `z VW`
+- `_[Y]`
+- `CHVW`
+- `SRVW`
+- `LSVW`
+- `D$ RPW`
+- `K(QW`
+- `@XSVW`
+- `t9VW`
+- `_u_^[`
+- `PLVW`
+- `DSVW`
+- `Nx@W`
+- `O(QW`
+- `(SVW`
+- `$QSW`
+- `PSQRW`
+- `D$4PQSRW`
+- `PQRVW`
+- `T$$RVW`
+- `C\VW`
+- `PPQW`
+- `u7SW`
+- `D$,W`
+- `\SVW`
+- `_@^]`
+- `H$SVW`
+- `9KDtW`
+- `ODQW`
+- `tSVW`
+- `_ ^_3`
+- `_$^_3`
+- `GDPW`
+- `_DSW`
+- `t'SW`
+- `VBRW`
+- `9:t>A`
+- `_\8]`
+- `PDSVW`
+- `K VW`
+- `P\GW`
+- `t;SW`
+- `<SVW`
+- `veSW`
+- `t-VSW`
+- `P SVW`
+- `P`VW`
+- ` SVW`
+- `d$@W`
+- `C VW`
+- `D$4W`
+- `T$<RW`
+- `I0VW`
+- `;:tdA`
+- `Ph8W`
+- `QhXW`
+- `Y$Vt6W`
+- `A,VW`
+- `_^@[]`
+- `T$hW`
+- `j8VW`
+- `90t/A`
+- `98t5A`
+- `98t7A`
+- `98t:A`
+- `98t/A`
+- `@lSVW`
+- `@HVW`
+- `@\VW`
+- `P,VW`
+- `6PSW`
+- `_@_[`
+- `CTVW`
+- `~3SVW`
+- `_P_^[]`
+- `viVW`
+- `@dSVW`
+- `[SVW`
+- `C@VW`
+- `H<VW`
+- `yHtJVW`
+- `X,VW`
+- `_^[J#`
+- `_[s3`
+- `t$<A`
+- `VvIW`
+- `t$8A`
+- `FXPW`
+- `0SVW`
+- `~DtOW`
+- `^[j8QW`
+- `$SPW`
+- `B|VW`
+- `R0PSW`
+- `h@~W`
+- `T$HW`
+- `D$(pA`
+- `>;<3uA`
+- `_ ^[]`
+- `A@VW`
+- `@PVW`
+- `_8_^`
+- `_<tBVS`
+- `toVW`
+- ``SVW`
+- `9~(tA`
+
+*... and 5183 more*
+
+## File Names (44)
+
+- `imm32.dll`
+- `DirectSound: failed to load DSOUND.DLL`
+- `DSOUND.DLL`
+- `USER32.DLL`
+- `OPENGL32.DLL`
+- `D3DX9_%02d.dll`
+- `D3D9.DLL`
+- `avrt.dll`
+- `\d3d9.dll`
+- `dsound.dll`
+- `dbghelp.dll`
+- `dwmapi.dll`
+- `DBGHELP.DLL`
+- `user32.dll`
+- `Data/Config/boot.lua`
+- `Data/Config/input.lua`
+- `screen.dat`
+- `Missions/%s.lua`
+- `%s.lua`
+- `Data/Script/Utils/EntityGlue.lua`
+- `Data/Script/Utils/RTTIObjectGlue.lua`
+- `Missions/Motorforge.lua`
+- `binkw32.dll`
+- `IMM32.dll`
+- `VERSION.dll`
+- `steam_api.dll`
+- `KERNEL32.dll`
+- `USER32.dll`
+- `GDI32.dll`
+- `ADVAPI32.dll`
+- `SHELL32.dll`
+- `ole32.dll`
+- `OLEAUT32.dll`
+- `MSVCR100.dll`
+- `WSOCK32.dll`
+- `d3d9.dll`
+- `d3dx9_43.dll`
+- `DINPUT8.dll`
+- `MSACM32.dll`
+- `WINMM.dll`
+- `MSVCP100.dll`
+- `Buddha.exe`
+- `bin\XInput1_3.dll`
+- `XInput1_3.dll`
+
+## Error Messages (323)
+
+- `Error: GFxLoader failed to open '%s'`
+- `Error: GFxLoader failed to open '%s', GFxFileOpener not installed`
+- `?Error: MovieImpl::GotoLabeledFrame('%s') unknown label`
+- `Error: GFxSwfEvent::Read - EventLength = %d, but read %d`
+- `Error loading URL "%s"`
+- `LoadMovieImageCallback failed to load image "%s"`
+- `Error: NULL pathToVar passed to SetVariable/SetDouble()`
+- `Error: jpeglib is not linked - can't load jpeg image data`
+- `Error: GFx_InflateWrapper() InflateEnd() return %d`
+- `Error: GFx_InflateWrapper() Inflate() returned %d`
+- `Error: GFx_InflateWrapper() InflateInit() returned %d`
+- `Error: jpeglib/zlib is not linked - can't load jpeg/zipped image data!`
+- `Export error: don't know how to export GFxResource '%s'`
+- `Error: %s`
+- `Failed to bind SWF file "`
+- `Error: GFxLoader read failed - no ExporterInfo tag in GFX file header`
+- `Error: GFxLoader read failed - file does not start with a SWF header`
+- `Failed to load SWF file "`
+- `Error loading SWF file "`
+- `GFxLoader failed to open "`
+- `Could not load user image "%s" - GFxImageLoader failed or not specified`
+- `Import error: GFxResource '%s' is not exported from movie '%s'`
+- `Import error: Font '%s' mapped to '%s'%s not found in GFxFontLib`
+- `Import error: Font '%s' not found in GFxFontMap or GFxFontLib`
+- `Failed to load image '`
+- `5Invalid SetProperty request, property number %d`
+- `Invalid GetProperty query, property number %d`
+- `<disasm error -- length exceeded>`
+- `Error: GetVariable failed: can't resolve the path "%s"`
+- `Error: Invoked method is not a function`
+- `Error: Invoked method '%s' is not a function`
+- `Invalid local register %d, stack only has %d entries`
+- `Error: invalid path '%s'`
+- `Error: KeyIsDown needs one Argument (the key code)`
+- `Error: KeyIsToggled needs one Argument (the key code)`
+- `Error: Invalid movie clip path; neither string nor object`
+- `<invalid>`
+- `Error: Action buffer dict length exceeded`
+- `Error: ProcessDeclDict(%d, %d) - DeclDict was already processed at %d`
+- `Error: InvokeParsed('%s','%s') - invalid char '%c'`
+- `Error: InvokeParsed('%s','%s') - invalid format '%%%c'`
+- `Error: InvokeParsed('%s','%s') - invalid format '%%l%c'`
+- `Error: InvokeParsed('%s','%s') - invalid format '%%h%c'`
+- `Error: KeyAddListener passed a NULL object; ignored`
+- `Error: KeyAddListener needs one Argument (the listener object)`
+- `Error: KeyRemoveListener passed a NULL object; ignored`
+- `Error: KeyRemoveListener needs one Argument (the listener object)`
+- `Error: SetVariable failed: can't resolve the path "%s"`
+- `removeMovieClip("%s") failed - depth must be >= 0`
+- `Error: CallFrame('%s') - unknown frame`
+- `Error: branch to offset %d - this section only runs to %d`
+- ` Error: Branch destination %d is out of action buffer bounds!`
+- `Error: DictLookup(%d) is out of bounds`
+- `Error: push register[%d] - register out of bounds`
+- `Error: WaitForFrame branch to offset %d - this section only runs to %d`
+- `Error: StoreRegister[%d] - register out of bounds!`
+- `Error: can't create object with unknown ctor`
+- `Error: CallMethod "as a function" - pushed object is not a function object`
+- `Error: CallMethod - can't find method %s`
+- `Error: CallMethod - '%s' is not a method`
+- `Error: typeof unknown: %02X`
+- `Error: can't create object with unknown class '%s'`
+- `Error: CallFunction - '%s' is not a function`
+- `Error: Unsupported opcode %02X`
+- `Error: CallFrame('%d') - unknown frame`
+- `Error: GFx_SpriteGotoAndPlay needs one arg`
+- `Error: GFx_SpriteGotoAndStop needs one arg`
+- `onLoadError`
+- `INVALID`
+- `Error: Font id = %d is referring to non-font resource in text field id = %d, def text = '%s'`
+- `Error: Resource for font id = %d is not found in text field id = %d, def text = '%s'`
+- `Error: text style with undefined font; FontId = %d`
+- `Error: GFx_ReadFillStyles, trying to read %d fillstyles into no-style shape`
+- `Error: GFx_ReadLineStyles, trying to read %d linestyles into no-style shape`
+- `Error: Corrupted shape detected in file %s`
+- `GASBitmapData::LoadBitmap: LoadMovieImageCallback failed to load image "%s"`
+- `@Failed to create gradient`
+- `%s() DirectX error %d`
+- `Haptic: Invalid haptic device identifier`
+- `Invalid audio device ID`
+- `Invalid window`
+- `Window surface is invalid, please call SDL_GetWindowSurface() to get a new surface`
+- `OpenGL error: GL_INVALID_ENUM`
+- `OpenGL error: GL_INVALID_VALUE`
+- `OpenGL error: %08X`
+- `glGetError`
+- `SetProp() failed`
+- `Unknown SDL error`
+- `Parameter is invalid`
+- `Error seeking in datastream`
+- `Error writing to datastream`
+- `Error reading from datastream`
+- `Assertion Failed`
+- `Assertion failure at %s (%s:%d), triggered %u %s:`
+- `ERROR: NumPoints = %i`
+- `Haptic error %s`
+- `%s: Unknown DirectSound error: 0x%x`
+- `Invalid call for the current state`
+- `Invalid parameter`
+- `XAudio2: CreateSemaphore() failed!`
+- `XAudio2: XAudio2Create() failed`
+- `XAudio2: CoInitialize() failed`
+- `Invalid destination format`
+- `Invalid source format`
+- `Invalid renderer`
+- `Invalid texture`
+- `Internal error: No way to get output resolution`
+- `ERROR: Cannot send touch on non-existent device with id: %li make sure SDL_AddTouch has been called`
+- `WaitForSingleObject() failed`
+- `ReleaseSemaphore() failed`
+- `windows_file_size: invalid context/file not opened`
+- `windows_file_seek: invalid context/file not opened`
+- `ChangeDisplaySettingsEx() failed: %s`
+- `DISP_CHANGE_FAILED`
+- `Failed loading `
+- `Invalid destination blit rectangle`
+- `Invalid source blit rectangle`
+- `GL_INVALID_OPERATION`
+- `GL_INVALID_VALUE`
+- `GL_INVALID_ENUM`
+- `GL_NO_ERROR`
+- `glFramebufferTexture2DEXT() failed`
+- `DRIVERINVALIDCALL`
+- `INVALIDCALL`
+- `INVALIDDEVICE`
+- `DRIVERINTERNALERROR`
+- `Error reading from BMP`
+- `Failed to compile shader:`
+- `No ASIO Driver Error`
+- `.\System\Error\hkError.cpp`
+- `Reference count error on object `
+- `(Windows)WSAStartup failed with error!`
+- `. Did you call hkVersionUtil::updateToCurrentVersion() or did it fail?`
+- `INDEX_TYPE_INVALID`
+- `EFFECT_TYPE_INVALID`
+- `maxErrorDistance`
+- `PRIORITY_INVALID`
+- `CONSTRAIN_ORIENTATION_INVALID`
+- `HK_STEP_RESULT_MEMORY_FAILURE_DURING_TOI_SOLVE`
+- `HK_STEP_RESULT_MEMORY_FAILURE_DURING_COLLIDE`
+- `HK_STEP_RESULT_MEMORY_FAILURE_BEFORE_INTEGRATION`
+- `SIMULATION_TYPE_INVALID`
+- `SOLVER_TYPE_INVALID`
+- `RESPONSE_INVALID`
+- `TYPE_INVALID`
+- `MOTION_INVALID`
+- `DEACTIVATOR_INVALID`
+- `BROAD_PHASE_INVALID`
+- `MATERIAL_INDICES_INVALID`
+- `INDICES_INVALID`
+- `HK_SHAPE_INVALID`
+- `INVALID_AGENT_TYPE`
+- `TtreCollideAfterStepFailure`
+- ` are not fully aligned (error :`
+- `ERROR`
+- `Error`
+- `Invalid integer value`
+- `Invalid float value`
+- `Missing/invalid`
+- `Error statting`
+- `Error opening`
+- `invalid enum value (%s = %d, limit %u)`
+- `getHandshakeError`
+- `getCreationError`
+- `getMatchError`
+- `getNetworkErrorString`
+- `Unhandled error inside lua: %s`
+- `SubMissionFail`
+- `MissionFail`
+- `FailMission`
+- `TestErrorMessage`
+- `kAXIS_DIR_Invalid`
+- `kAXIS_DIR_INVALID`
+- `TL_Error`
+- `kLC_TitleError`
+- `kLC_ErrorInternal`
+- `kLC_ErrorNetwork`
+- `kLC_ErrorSignInXbox`
+- `kLC_ErrorSignInPS3`
+- `kLC_ErrorSignInPC`
+- `kLC_ErrorPermissionsXbox`
+- `kLC_ErrorPermissionsPS3`
+- `kLC_ErrorPermissionsPC`
+- `kLC_ErrorDisconnectXbox`
+- `kLC_ErrorDisconnectPS3`
+- `kLC_ErrorDisconnectPC`
+- `kLC_ErrorRemoteGame`
+- `kLC_ErrorUnavailable`
+- `kLC_ErrorConnectHostLocal`
+- `kLC_ErrorConnectHostRemote`
+- `kLC_ErrorConnectPeerLocal`
+- `kLC_ErrorConnectPeerRemote`
+- `kLC_ErrorMigrateLocalStrict`
+- `kLC_ErrorMigrateRemoteStrict`
+- `kLC_ErrorLocalStrict`
+- `kLC_ErrorRemoveStrict`
+- `kLC_ErrorLatency`
+- `kLC_ErrorStarted`
+- `kLC_ErrorGameFull`
+- `kLC_ErrorNetworkFull`
+
+*... and 123 more*
+
+## Debug Messages (365)
+
+- `trace`
+- `LOG10E`
+- `@LOG2E`
+- `isDebugger`
+- `glGetInfoLogARB`
+- `Stack trace is:`
+- `* Either debug information was not found or your version of`
+- `* See the comments in hkStackTracer::hkStackTracer()`
+- `Ragdoll Technology`
+- `DebugTable`
+- `hkpCollisionDispatcher::debugPrintTable`
+- `hkpVehicleDriverInputAnalogStatus`
+- `hkpVehicleDefaultAnalogDriverInput`
+- `kDEBUGTEXT_None`
+- `kDEBUGTEXT_Graphics`
+- `kDEBUGTEXT_Sound`
+- `kDEBUGTEXT_Memory`
+- `kDEBUGTEXT_Profiler`
+- `kDEBUGTEXT_Tile`
+- `kDEBUGTEXT_PlayerPosition`
+- `kDEBUGTEXT_Camera`
+- `kDEBUGTEXT_Climate`
+- `kDEBUGTEXT_AudioEnv`
+- `kDEBUGTEXT_MiniMap`
+- `kDEBUGTEXT_Clump`
+- `kDEBUGTEXT_Cutscenes`
+- `kDEBUGTEXT_Flash`
+- `kDEBUGTEXT_Encounter`
+- `kDEBUGTEXT_Io`
+- `kDEBUGTEXT_SAI`
+- `kDEBUGTEXT_Net`
+- `DEBUG`
+- `bDisplayStartupDialog`
+- `bDisplayDebugUnitHealth`
+- `bWaitForDebugConnection`
+- `DebugText`
+- `playOpeningLogo`
+- `enableDebugFlying`
+- `allowDebugMenu`
+- `enableResourceLog`
+- `resourceLogFile`
+- `DebugTeamSkirmish`
+- `netDebug`
+- `DebugStartInstall`
+- `-reassignWithAnalog`
+- `Debug`
+- `Debug UI`
+- `SyncTrace`
+- `debug`
+- `DebugFont`
+- `kDEBUGTEXT_RsrcPoolMem`
+- `kDEBUGTEXT_RsrcPoolFragmentation`
+- `RegisterForDebug`
+- `RsLogLabel`
+- `global_debug`
+- `PrintStackTrace`
+- `DebugEntity_SetGroupEnabled`
+- `DebugEntity_GetGroupEnabled`
+- `DebugRender_SetGroupEnabled`
+- `DebugRender_GetGroupEnabled`
+- `DebugRender_GetTagEnabled`
+- `DebugRender_SetTagEnabled`
+- `DebugRender_ToggleTagEnabled`
+- `StartRsLog`
+- `StopRsLog`
+- `SetTerrainDebugEnabled`
+- `GetTerrainDebugEnabled`
+- `SetTerrainDebugLevel`
+- `CycleTerrainDebugLevel`
+- `CreateDebugLine`
+- `CreateDebugSphere`
+- `ClearDebugEntities`
+- `TestTrace`
+- `Trace`
+- `GetDebugBuild`
+- `TT_DebugEvent`
+- `IsModalDialogActive`
+- `CloseModalDialog`
+- `GetDebugCamera`
+- `CoDebugCameraController`
+- `DebugNormals`
+- `DebugObjectDataToLoad`
+- `WORLD_Debug`
+- `kKD_Debug`
+- `CoDebugRender`
+- `dialog`
+- `ToggleDebugUI`
+- `HideDebugUI`
+- `Cutscene_DebugControlEntity`
+- `DebugRenderEntity`
+- `CcPlayLineFromDialogSet`
+- `Play Line From Dialog Set`
+- `DialogSetName`
+- `DialogSet`
+- `The dialog set to play a line from`
+- `DialogSetsFilename:RsRef<DialogSets>`
+- `A collection of dialog sets used for reactions to generic events`
+- `DialogReactionSets`
+- `A collection of dialog sets`
+- `DialogSets`
+- `Lines of dialog`
+- `DialogSetTypesByName`
+- `RenderQuadTerrainDebugDataVis`
+- `ImageDOFDebug`
+- `ImageDebugFontCopy`
+- `RenderDebugWidget`
+- `RenderDebugMesh`
+- `RenderDebugLinesScreen`
+- `RenderDebugLinesTransparent`
+- `RenderDebugLines`
+- `RenderDebugTrisTransparent`
+- `RenderDebugTris`
+- `RenderDebugBitangents`
+- `RenderDebugTangents`
+- `g_vDebugColor`
+- `g_fDebugTransparency`
+- `g_eMaterialDebugType`
+- `g_vDebugAmbientColor`
+- `g_vDebugDirLightColor`
+- `g_fDebugHighlightDistance`
+- `g_vDebugWidgetFillColor`
+- `g_vDebugWidgetBorderColor`
+- `g_vDebugWidgetZones`
+- `g_bDebug`
+- `g_bDebugVertex`
+- `kVERTTYPE_DebugTri`
+- `kVERTTYPE_DebugLine`
+- `kVERTTYPE_DebugWidget`
+- `Dialog`
+- `RenderDebugMeshPS`
+- `RenderDebugMeshVS`
+- `kMDT_DebugColor`
+- `kMDT_AmbmeshFadeDebug`
+- `AnalogInputs`
+- `AnalogInputAliases`
+- `DebugColor`
+- `TraceActiveParticleSystems`
+- `TraceTextures`
+- `AddDialogSetByName`
+- `SetChatterDialogSet`
+- `SetDialogSetForDialogType`
+- `PauseAllNonScriptedDialog`
+- `Dialog reaction set`
+- `Default dialog set (for chattering)`
+- `DisabledDialogTypes`
+- `DialogSetIntervals`
+- `Time between saying any new types of dialog sets`
+- `Need to be winning by this percent before winning/losing dialog will trigger`
+- `kGameJournalState_AbandonDialog`
+- `UI/Flash/AbandonDialog/AbandonDialog`
+- `PlayMotorForgeCategoryHoverDialog`
+- `PlayMotorForgeCategoryPurchaseDialog`
+- `PlayMotorForgeItemPurchaseDialog`
+- `PlayMotorForgeItemEquippedDialog`
+- `PlayMotorForgeItemHoverDialog`
+- `PlayMotorForgeDialog`
+- `EnableDebugFlying`
+- `IsDebugFlyingEnabled`
+- `RaisedInspectDialogSet`
+- `RaiseDialogResource`
+- `RaiseDialogSets`
+- `EnableDebugCameraControls`
+- `AreDebugCameraControlsEnabled`
+- `DebugDrawHeight`
+- `TracerEffect`
+- `TracerEffectIsTargeted`
+- `BuffAppliedDialog`
+- `Dialog set to play when buff gets applied`
+- `DialogSetDoneNotification`
+- `OnDialogSetDone`
+- `NotifyOnDialogSetDone`
+- `BuildHintDialog`
+- `Dialog to play when hovering over this thing in the build menu`
+- `HoverDialog`
+- `PurchaseDialog`
+- `EquippedDialogs`
+- `PickedUpDialog`
+- `Dialog set to play on the holder when this is picked up`
+- `DroppedDialog`
+- `Dialog set to play on the holder when this is dropped`
+- `DebugSpotlightPrototype`
+- `Prototype Resource for the debug spotlight`
+- `PlayAnimalShockedDialog`
+- `When this thing is shocked, should the instigator play dialog about shocking an animal?`
+- `DisplayDebugRadii`
+- `SoloCompletedDialog`
+- `Dialogset to play when you successfully complete this solo`
+- `SoloSoundDialogSet`
+- `OutputTargetingDebug`
+- `If true, traces all the factors in it's target picking`
+- `PlayerCoopStartDialogAlias`
+- `PlayerCoopEndDialogAlias`
+- `FireWeaponDialogAlias`
+- `PlayerCoopFireWeaponDialogAlias`
+- `PlayerCoopDeathEjectDialogAlias`
+- `PlayerCoopDrivingChatterDialogAlias`
+- `DebugFootSteps`
+- `Dialog set for talking`
+- `DialogSequences`
+- `When this is filled out, the dialog sequence isn't a sequence, we select the appropriate line to play based on mission state`
+
+*... and 165 more*
+
+## Format Strings (464)
+
+- `Ht%Hud`
+- `s(G%`
+- `G<su%`
+- `:G%u\f`
+- `D7%f`
+- `H% f`
+- `D$dF%`
+- `G%f9O"u2`
+- `0V%f`
+- `instance%u`
+- `  SetBackgroundColor: (%d %d %d)`
+- `---- actions for event 0x%X (%s)`
+- `---- GFxSwfEvent::Read -- Event_KeyPress found, key code is %d`
+- `  actions: flags = 0x%X`
+- `  blend mode = %d`
+- `  ClipDepth = %d`
+- `  name = %s`
+- `  ratio: %f`
+- `  char id = %d`
+- `  depth = %d`
+- `  CharId = %d`
+- `  GFx_DefineBitsJpeg2Loader: charid = %d pos = 0x%x`
+- `  GFx_DefineBitsJpeg3Loader: charid = %d pos = 0x%x`
+- `  ShapeLoader: id = %d`
+- `  ShapeMorphLoader: id = %d`
+- `  Font: id = %d`
+- `GFx_DefineFontInfoLoader: can't find GFxFontResource w/ id %d`
+- `  button GFxCharacter loader: CharId = %d`
+- `  export: id = %d, name = %s`
+- `  export: count = %d`
+- `%cHasMetadata`
+- `%cUseNetwork`
+- `  metadata: %s`
+- `Scale9Grid has negative height %f`
+- `Scale9Grid has negative width %f`
+- `Scale9GridLoader, id=%d, x=%d, y=%d, w=%d, h=%d`
+- `  RemoveObject2(%d)`
+- `  NumFonts = %d`
+- `  PadPixels = %d, nominal glyph size = %d, numTexGlyphs = %d`
+- `  import: id = %d, name = %s`
+- `  importAssets2: SourceUrl = %s, count = %d`
+- `  importAssets: SourceUrl = %s, count = %d`
+- `SWF File version = %d, File length = %d`
+- `Warning: Self recursive import detected in '%s'`
+- `*** no tag loader for type %d`
+- `Note: SWF Frame Rate = %f, Frames = %d`
+- `Leaked string content: %s`
+- `ActionScript Memory leaks in movie '%s', including %d string nodes`
+- `---------------Tag type = %d, Tag length = %d, offset = %d`
+- `---------------Tag type = %d, Tag length = %d`
+- `:_level%d`
+- `!!! ExecuteEvent finished '%s' = %p`
+- `!!! ExecuteEvent started '%s' = %p`
+- `%s : %s`
+- `arg[%d] - '%s'`
+- `name = '%s', ArgCount = %d`
+- `function length = %d`
+- `arg[%d] - reg[%d] - '%s'`
+- `        pg = %d`
+- `        pp = %d`
+- `        pr = %d`
+- `ss = %d, ps = %d`
+- `sa = %d, pa = %d`
+- `st = %d, pt = %d`
+- `name = '%s', ArgCount = %d, RegCount = %d`
+- ` [%d]`
+- `DictLookupLg[%d]`
+- `DictLookup[%d]`
+- `(int) %d`
+- `(double) %f`
+- `bool(%d)`
+- `reg[%d]`
+- `(Float) %f`
+- `%-15s`
+- `-- actions in frame %d`
+- `tag %d: DoActionLoader`
+- `  -- init actions for sprite %d`
+- `  tag %d: DoInitActionLoader`
+- `---enumerate - Push: %s`
+- `-------------- %s = %s`
+- `==== stack top index %d ====`
+- `GetURL2 - path: %s  URL: %s`
+- `-------------- pushed int32 %d`
+- `-------------- pushed double %f`
+- `-------------- pushed %s`
+- `-------------- pushed '%f'`
+- `-------------- pushed '%s'`
+- `-------------- pushed global register[%d] = '%s'`
+- `-------------- pushed local register[%d] = '%s'`
+- `-------------- with block start: stack size is %d`
+- `-------------- global register[%d] = '%s'`
+- `-------------- local register[%d] = '%s'`
+- `GetURL - path: %s  URL: %s`
+- `New object created at %p`
+- `---new method: %s`
+- `-- GetMember %s=%s at %p`
+- `-- GetMember %s=%s`
+- `New object %s at %p`
+- `---new object: %s`
+- `-- ActionSetTarget2: %s - no target found`
+- `-- ActionSetTarget2: %s (%d)`
+- `-- set var: %s `
+- `-- get var: %s=%s at %p`
+- `-- get var: %s=%s`
+- `Sprite::ReplaceDisplayObject(): unknown cid = %d`
+- `@@  -- sprite END, char id = %d --`
+- `  ShowFrame (sprite, char id = %d)`
+- `  frames = %d`
+- `GFxSprite::AddDisplayObject(): unknown cid = %d`
+- `AddFrameName(%d, '%s') -- frame name already assigned to frame %d; overriding`
+- `Unknown filter code %d`
+- `  filter count: %d`
+- `  envelope size = %d`
+- `  LoopCount = %d`
+- `  OutPoint = %d`
+- `  InPoint = %d`
+- `  HasInPoint = %d`
+- `  HasOutPoint = %d`
+- `  HasLoops = %d`
+- `  HasEnvelope = %d`
+- `    SoundId = %d`
+- `EditTextChar, varname = %s, text = %s`
+- `  HasLayout: alignment = %d, leftmarg = %f, rightmarg = %f, indent = %f, leading = %f`
+- `  HasMaxLength: len = %d`
+- `  HasFont: font id = %d`
+- `  AutoSize = %d, Selectable = %d, Border = %d, Html = %d, UseDeviceFont = %d`
+- `  WordWrap = %d, Multiline = %d, Password = %d, ReadOnly = %d`
+- `  TextRect = { l: %f, t: %f, r: %f, b: %f }`
+- `@AProcessImageTags: can't load the image '%s'`
+- `ProcessImageTags: can't find a resource for export name '%s'`
+- `  Thinkness = %f, Sharpnesss = %f`
+- `  FlagType = %s, GridFit = %s`
+- `CSMTextSettings, id = %d`
+- `EditTextChar, id = %d`
+- `Warning: static text uses imported font! FontId = %d, import name = %s`
+- `  GlyphRecords: count = %d`
+- `  YOffset = %g`
+- `  XOffset = %g`
+- `TextCharacter, id = %d`
+- `  GFx_ReadFillStyles: count = %d`
+- `  GFx_ReadLineStyles: count2 = %d`
+- `  GFx_ReadLineStyles: count = %d`
+- `  ShapeCharacter read: straight edge = %4g %4g - %4g %4g`
+- `  ShapeCharacter read: curved edge   = %4g %4g - %4g %4g - %4g %4g`
+- `  ShapeCharacter read: line = %d`
+- `  ShapeCharacter read: fill1 = %d`
+- `  ShapeCharacter read: fill0 = %d`
+- `  ShapeCharacter read: moveto %4g %4g`
+- `  ShapeCharacter read: nfillbits = %d, nlinebits = %d`
+- `8morph fsr BitmapChar = %d`
+- `morph fsr: numGradients = %d`
+- `morph fill style type = 0x%X`
+- `reading code table at offset %d`
+- `     Pair: %d - %d,`
+- `adj = %d`
+- `  KerningCount = %d`
+- `  Ascent = %d, Descent = %d, Leading = %d`
+- `  LangCode = %d`
+- `  HasLayout = %d, CodePage = %s, Italic = %d, Bold = %d`
+- `  Name = %s, %d glyphs`
+- `offset[%d] = %d`
+- `offset[0] = %d`
+- `  CodePage = %s, Italic = %d, Bold = %d`
+- `  Name = %s`
+- `RGBA: %d %d %d %d`
+- `%s %s %2d %02d:%02d:%02d GMT%+03d%02d %d`
+- `  BitmapChar = %d`
+- `  gradients: numGradients = %d`
+- `  FillStyle read type = 0x%X`
+- `There are %d joysticks available`
+- `Joystick only has %d axes`
+- `Joystick only has %d hats`
+- `Joystick only has %d balls`
+- `Joystick only has %d buttons`
+- `Haptic: There are %d haptic devices available`
+- `Hat index too large: %d`
+- `Button index too large: %d`
+- `Axis index too large: %d`
+- `Joystick button name too large: %s`
+- `Button name too large: %s`
+- `%s,%s,%s`
+- `Couldn't find mapping for device (%d)`
+- `Audio target '%s' not available`
+- `SDLAudioDev%d`
+- `displayIndex must be in the range 0 - %d`
+- `index must be in the range of 0 - %d`
+- `No video mode large enough for %dx%d`
+- `Unknown OpenGL context profile %d`
+- `Unknown OpenGL context flag %d`
+- `%s not available`
+- `  '%s'`
+- `'%s'`
+- `    * %s (%s:%d)`
+- `%s: %s`
+- `%s: `
+- `Sound buffer size must be between %d and %d`
+- `Created renderer: %s`
+- `index must be -1 or in the range of 0 - %d`
+- `Keypad %`
+- `Couldn't open %s`
+
+*... and 264 more*
+
+## Class/Struct Names (163)
+
+- `G Ph,=`
+- `G-Ph`
+- `G$Ht`
+- `G SP`
+- `G$PQ`
+- `G`QPV`
+- `GT_^`
+- `GSFD`
+- `GLtO`
+- `GDtCVP`
+- `GP_^`
+- `GLLpt`
+- `GLHpt`
+- `GdN;G`
+- `G@SV`
+- `G(PV`
+- `GX_[`
+- `GtRVQ`
+- `G4S3`
+- `GT;H`
+- `GT;p`
+- `GD[]`
+- `GX_^[`
+- `GTtL`
+- `GTt/`
+- `GTtI`
+- `GTt@`
+- `G,PQ`
+- `GL:FLu`
+- `GT:FTu`
+- `G0SV`
+- `GPPQ`
+- `GDt7VP`
+- `GDVt[P`
+- `GDt_P`
+- `GdVt`
+- `G T@`
+- `GtVP`
+- `G$QQ`
+- `G Sh8`
+- `G4Ph`
+- `GXQRh`
+- `GXtoP`
+- `G$St`
+- `GPt+P`
+- `G(St`
+- `G,A;`
+- `GLP3`
+- `GTPQ`
+- `GpPj`
+- `GXPQ`
+- `G0A;`
+- `GdSP`
+- `G9J||`
+- `GNQP`
+- `GT_^[]`
+- `GPPhX`
+- `GTPh`
+- `G(Sj`
+- `GXt9`
+- `GC;]`
+- `GHPQ`
+- `GD[_`
+- `GC;}`
+- `G(SVh`
+- `G4VP`
+- `G4RP`
+- `GWQQ`
+- `G$PP`
+- `GaUP`
+- `G`UP`
+- `GtLY`
+- `GGYCY`
+- `GG9U`
+- `G$VP`
+- `G&WS`
+- `G$PQh`
+- `GfCf`
+- `GPRP`
+- `G$Pj`
+- `G0PQ`
+- `G`PQ`
+- `G0PS`
+- `G0PSV`
+- `G@SPQ`
+- `GFxMorphCharacterDef, second shape:`
+- `GFxMorphCharacterDef, first shape:`
+- `GL_TABLE_TOO_LARGE`
+- `GL_OUT_OF_MEMORY`
+- `GL_UpdateViewport`
+- `GL_ResetState`
+- `GL_CreateTexture`
+- `GL_UpdateTexture`
+- `GL_RenderDrawLines`
+- `GL_RenderFillRects`
+- `GL_RenderCopy`
+- `GL_RenderCopyEx`
+- `GL_RenderReadPixels`
+- `GL_EXT_framebuffer_object`
+- `GL_ARB_multitexture`
+- `GL_EXT_texture_rectangle`
+- `GL_ARB_texture_rectangle`
+- `GL_ARB_fragment_shader`
+- `GL_ARB_vertex_shader`
+- `GL_ARB_shading_language_100`
+- `GL_ARB_shader_objects`
+- `GREY75`
+- `GREY50`
+- `GREY25`
+- `GREY`
+- `GAINSBORO`
+- `GRAY`
+- `GOLDENROD`
+- `GOLD`
+- `GREEN`
+- `GHOSTWHITE`
+- `GTthkp3AxisSweep::checkDeterminism`
+- `GUI/HUD`
+- `GUI/SinglePlayer/TuteCard`
+- `GUID`
+- `GUI/SinglePlayer/LighterOne`
+- `GUI/SinglePlayer/HintPopup`
+- `GAME STATS`
+- `GUI/SinglePlayer/FireTribute_Start`
+- `GUI/SinglePlayer/FireTribute_End`
+- `GUI/Common/MenuSelect`
+- `GUI/Common/MenuCancel`
+- `GUI/Common/MenuScroll`
+- `GoMissionName`
+- `GETTABLE`
+- `GETGLOBAL`
+- `GETUPVAL`
+- `G;Ln^;<nv;`
+
+## Lua API References (72)
+
+- `tf9xlua`
+- `ladspa_descriptor`
+- `ice-description`
+- `ice-description: `
+- `description`
+- `hkDescriptionAttribute`
+- `hctAttributeDescription`
+- `hkxVertexDescriptionElementDecl`
+- `hkxVertexDescription`
+- `frictionDescription`
+- `hkpVehicleFrictionDescriptionAxisDescription`
+- `hkpVehicleFrictionDescription`
+- `Music_Scripted/FrontEnd/Setlist`
+- `TT_Lua`
+- `getMapDescription`
+- `(Unknown lua panic)`
+- `LuaScripts`
+- `.lua"`
+- `Description`
+- `LuaScript`
+- `kLCP_Script`
+- `INPUTSTREAM_Lua`
+- `INPUTSTREAM_LuaAll`
+- `kCAMERA_Scripted`
+- `ScriptCamera`
+- `GetScriptCamera`
+- `LuaAction`
+- `kSLP_ScriptLow`
+- `kSLP_ScriptDefault`
+- `kSLP_ScriptHigh`
+- `Description of a cutscene`
+- `A complete description of the atmospherics at a particular time of day`
+- `If true, forces TeamType to the value passed in from gameplay Lua code`
+- `CcLuaCommand`
+- `Lua Command`
+- `Executes the given lua code`
+- `LuaCommand`
+- `The lua command to execute (with parameters and scope)`
+- `CoScriptCameraController`
+- `RegisterLuaMethods`
+- `GetUpgradeDescription`
+- `aSoloDescriptions`
+- `kCP_Scripted`
+- `kALERT_LuaAlert`
+- `The description of a faction's tech tree`
+- `BuildDescriptions`
+- `Scripted/MtRockmore`
+- `ControlDescriptionLineCode`
+- `SetScriptOwner`
+- `ScriptName`
+- `DescriptionLineCode`
+- `The evaluation type the AI uses to determine if it should coop with this unit`
+- `Scripted`
+- `Lua function expected`
+- `dynamic libraries not enabled; check your Lua installation`
+- `.\?.lua;!\lua\?.lua;!\lua\?\init.lua;!\?.lua;!\?\init.lua`
+- `.?AVRs_DescriptorRegistry@@`
+- `.?AVLuaAction@@`
+- `.PAVLuaAction@@`
+- `.?AVLuaInputStream@@`
+- `.?AV?$AccessorAttribute@VName@@VCcLuaCommand@@@@`
+- `.?AVCcLuaCommand@@`
+- `.PAVCcLuaCommand@@`
+- `.?AVCoScriptCameraController@@`
+- `.PAVCoScriptCameraController@@`
+- `.?AV?$_TypedHolder@V?$Array@UBuildDescription@@@@@Any@@`
+- `.?AV?$AttributeTypeVoodoo@V?$Array@UBuildDescription@@@@$01@@`
+- `.?AV?$TypedAttribute@V?$Array@UBuildDescription@@@@@@`
+- `.?AV?$ReferenceAttribute@V?$Array@UBuildDescription@@@@@@`
+- `.?AUBuildDescription@@`
+- `.PAUBuildDescription@@`
+- `.?AV?$Array@UBuildDescription@@@@`
+
+## Other (29947)
+
+- `uo;|$`
+- `uI;|$`
+- `vLh42`
+- `tHj+jT`
+- `SVWh<4`
+- `jdhhx`
+- `t%9pH`
+- `t'9pH`
+- `dSVW3`
+- `T$(hd<`
+- `D$(ht<`
+- `G h8=`
+- `G$hL=`
+- `D$(h$>`
+- `L$(h@>`
+- `T$(hT>`
+- `D$(hd>`
+- `\$0hx>`
+- `T$@FR`
+- `T$$Rhl`
+- `T$lRhX@`
+- `HtcHtFHuz`
+- `C,8C-`
+- `Xh9^$t`
+- `^39^(t`
+- `{p_^[]`
+- `PD9pHu`
+- `QSVW3`
+- `S4_^[`
+- `venat`
+- `minat`
+- `hvena`
+- `hmina`
+- `9{ vY`
+- `G;{ r`
+- `garv8G`
+- `gir t`
+- `hgarv`
+- `hgir `
+- `H[f;p`
+- `D0Hf;V`
+- `W0:D:3r`
+- `j9h,8`
+- `j9hP8`
+- `@8SVWR`
+- `ascut`
+- `ucsat`
+- `SVWhascu`
+- `hucsa`
+- `UUUU%UUUU+`
+- `3333%3333`
+- `L$XRP`
+- `L$hRP`
+- `D$pRP`
+- `C(_^[`
+- `c,?!C0`
+- `c8?!C<`
+- `cH?!CL`
+- `K(PRQ`
+- `Fc_^[`
+- `T$TP3`
+- `D$<SP`
+- `T$0QSR`
+- `\$<9L$0`
+- `L$(RQ`
+- `T$PRQQ`
+- `T$<QQ`
+- `L$HQRQ`
+- `t$$;\$`
+- `,;9wJ`
+- `VPQWR`
+- `IPRPQ`
+- `tMSVW3`
+- `Nb:D94s`
+- `T$HQR`
+- `t$,N#`
+- `\$,#L$L`
+- `D$X;E$`
+- `L$$;L$4`
+- `:T>4rF`
+- `D;6O:T>4s`
+- `L$ ;L$`
+- `H@_^[`
+- `s<^[]`
+- `f,?!V0`
+- `f8?!V<`
+- `fH?!VL`
+- `{(!C,!K0`
+- `{4!C8!K<`
+- `{@!CH!KL`
+- `L$X#L$h`
+- `T$\#T$l`
+- `L$d#L$t`
+- `9F,v#`
+- `N0;F,r`
+- `~$_[]`
+- `D$,;|$T`
+- `99t*B`
+- `8_^[]`
+- `PXVW3`
+- `L$$9y`
+- `D$ @;`
+- `D$8WP`
+- `Qj/Ph`
+- `Vj/Ph`
+- `N PQSS`
+- `PQhpC`
+- `u,h|C`
+- `T$,+T$$`
+- `D$(+D$ `
+- `?RHPQ`
+- `t'Ht$`
+- `tAHt>`
+- `tGj@P`
+- `WPQRh`
+- `\u5@;`
+- `<tu@j`
+- `<fu=V`
+- `<1tM<0tI`
+- `?"tY;`
+- `T$$9B`
+- `?1>_^[`
+- `F,V;F(t4`
+- `F,V;F(tN`
+- `?12^[`
+- `D$<j@P`
+- `T$<j@R`
+- `D$4SPj`
+- `D$,PjdQR`
+- `?12_^`
+- `?Qj(j(P`
+- `O@;OD`
+- `t>WVh`
+- `;D$ t `
+- `PQh,?`
+- `F,V;F(tl`
+- `9~4vE3`
+- `9J4v}S`
+- `:X2uR`
+- `F<W9F8t7`
+- `D$ 9E`
+- `p@;t$(u`
+- `L$ ;M`
+- `z@;|$(u`
+- `9HDth`
+- `9HDt_`
+- `9ODta`
+- `9KDtY`
+- `T$(9U`
+- `9HDtY`
+- `T$(;U`
+- `9C@u:9KDu5`
+- `9HDu+j`
+- `9p(t*`
+- `tKHtH`
+- `F,V;F(t`
+- `/u88H`
+- `QPh,?`
+- `Pj/Rh`
+- `Pj/Qh`
+- `/j/FV`
+- `\t{Hy`
+- `Pj/Vh`
+- `uhj\V`
+- `D$4Pj`
+- `D$DPh`
+- `D$ ;D$4`
+- `D$<Pj`
+- `D$DPQ`
+- `L$ QR`
+- `D$(;D$<`
+- `T$4RQ`
+- `9KDt_`
+- `Gl0@l`
+- `9Y,}S`
+- `PQh0Q`
+- `9W$uC9W0u>`
+- `CE_^[`
+- `Ht_^[`
+- `~t_^[`
+- `O,VPQ`
+- `t5;w$v0`
+- `O PQS`
+- `SVWh8`
+- `Hu=hx`
+- `WPQWSRV`
+- `t)j:jp`
+- `t%j:jH`
+- `uKj:h`
+- `</u08F`
+- `:t&<"u`
+- `+FT;FHs`
+- `;T$$w`
+- `;L$ s`
+- `8fcfdu4f`
+- `DSVWj<`
+- `@SVW3`
+- `:t><"u`
+- `9~0vT`
+- `fpfdu`
+
+*... and 29747 more*
+

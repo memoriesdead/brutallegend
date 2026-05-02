@@ -51,10 +51,12 @@ class FileRecord:
         raw_dword3 = struct.unpack(">I", data[12:16])[0]
 
         self.uncompressed_size = raw_dword0 >> 8
-        self.raw_name_offset = raw_dword1 >> 11  # Original formula from Kaitai spec
+        self.raw_name_offset = raw_dword1 >> 11  # NOTE: This produces garbage values for this format
         self.offset = raw_dword2 >> 3
         self.size = (raw_dword2 << 5) >> 9
-        self.file_type_index = ((raw_dword3 << 4) >> 24) >> 1
+        # file_type_index: (raw_dword3 >> 20) & 0xFF
+        # Bits 20-27 of raw_dword3 store the file extension index
+        self.file_type_index = (raw_dword3 >> 20) & 0xFF
         self.compression_type = data[15] & 0x0F
 
         self.name_position = name_dir_offset + self.raw_name_offset
@@ -159,10 +161,11 @@ class DFPFExtractor:
                 null_pos = name_dir_data.find(b"\x00", buf_offset)
                 if null_pos == -1:
                     break
-                name = name_dir_data[buf_offset:null_pos].decode("ascii", errors="replace")
-                # Store by absolute file position
-                self.names[self.header.name_dir_offset + buf_offset] = name
-                # Next name starts after this null (don't skip buf_offset + 1 - that's wrong)
+                # Only record non-empty strings (skip leading null padding)
+                if null_pos > buf_offset:
+                    name = name_dir_data[buf_offset:null_pos].decode("ascii", errors="replace")
+                    self.names[self.header.name_dir_offset + buf_offset] = name
+                # Next name starts after this null
                 buf_offset = null_pos + 1
 
             f.seek(self.header.file_records_offset)
@@ -180,21 +183,29 @@ class DFPFExtractor:
                 record = FileRecord(record_data, self.header.name_dir_offset, i)
 
                 # Primary method: use sequential mapping (record i -> string i)
-                # This works correctly for this DFPF format
+                # This works correctly for this DFPF format where names are stored
+                # sequentially in the name directory
                 if i < len(ordered_names):
                     record.filename = ordered_names[i]
-                elif record.name_position in self.names:
-                    # Fallback: try position-based lookup
-                    record.filename = self.names[record.name_position]
                 else:
-                    record.filename = f"file_{i:04d}_offset_{record.name_position}"
+                    # Fallback: name directory is shorter than num_files
+                    # Use sequential index-based naming (NOT offset-based - raw_name_offset is broken)
+                    record.filename = f"file_{i:04d}"
 
-                if record.file_type_index < len(self.file_extensions):
-                    record.extension = self.file_extensions[record.file_type_index]
+                # For this DFPF format, filenames in the name directory already include extensions
+                # (e.g., "data/all.proto", "win/shaders/ambmesh.fxo")
+                # The file_type_index does NOT index into file_extensions for this format
+                # So we use the filename as-is when it contains an extension
+                if "." in record.filename:
+                    # Filename already has extension embedded, use as-is
+                    record.full_filename = record.filename
                 else:
-                    record.extension = "bin"
-
-                record.full_filename = f"{record.filename}.{record.extension}"
+                    # Filename has no extension, use file_type_index to get extension
+                    if record.file_type_index < len(self.file_extensions):
+                        record.extension = self.file_extensions[record.file_type_index]
+                    else:
+                        record.extension = "bin"
+                    record.full_filename = f"{record.filename}.{record.extension}"
                 self.file_records.append(record)
 
             print(f"Parsed {len(self.file_records)} file records")
@@ -280,6 +291,8 @@ class DFPFExtractor:
             if (
                 record.full_filename.lower() == filename_lower
                 or record.filename.lower() == filename_lower
+                or record.filename.lower().endswith("/" + filename_lower)
+                or record.filename.lower().endswith("\\" + filename_lower)
             ):
                 return record
         return None

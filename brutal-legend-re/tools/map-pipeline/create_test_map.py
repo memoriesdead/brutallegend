@@ -91,11 +91,19 @@ class DFPFCreator:
             self.file_extensions.append(extension)
 
     def _pack_file_record(self, record: FileRecord, name_offset: int) -> bytes:
-        """Pack a file record into 16 bytes (V5 format)."""
+        """Pack a file record into 16 bytes (V5 format).
+
+        IMPORTANT: The original format encodes only offset in raw_dword2 (as offset << 3),
+        and size is derived as offset >> 1 (NOT independently stored). The actual compressed
+        size is determined by zlib stream boundaries, not by the size field.
+
+        So we encode: raw_dword2 = sequential_offset << 3
+        And size in header = sequential_offset >> 1 (derived, not actual compressed size)
+        """
         raw_dword0 = record.uncompressed_size << 8
         raw_dword1 = name_offset << 11
-        raw_dword2 = (record.offset << 3) | (record.size & 0xFFFFFFF0)
-        raw_dword3 = ((record.file_type_index * 2) << 20) | (record.compression_type & 0x0F)
+        raw_dword2 = record.offset << 3  # Only offset is encoded (size is derived)
+        raw_dword3 = (record.file_type_index << 20) | (record.compression_type & 0x0F)
         return struct.pack(">IIII", raw_dword0, raw_dword1, raw_dword2, raw_dword3)
 
     def save(self, output_path: str) -> Tuple[Path, Path]:

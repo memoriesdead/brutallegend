@@ -1,5 +1,6 @@
 # Claude Code local settings
 .claude/
+.agent-state/
 
 # Extracted game data (contains proprietary game files)
 brutal-legend-re/test_extract/

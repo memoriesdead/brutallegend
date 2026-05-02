@@ -65,13 +65,13 @@ class DFPFRepacker:
 
         for root, dirs, files in os.walk(ext_dir):
             for fname in files:
-                fpath = Path(root)
+                fpath = Path(root) / fname  # Include filename, not just directory
                 rel_path = fpath.relative_to(ext_dir)
                 filename = str(rel_path).replace('\\', '/')
                 ext = fname.split('.')[-1].lower() if '.' in fname else ''
 
                 found_exts.add(ext)
-                extracted_files[filename] = fpath / fname
+                extracted_files[filename] = fpath
 
         # Track which original records we've matched
         matched_count = 0
@@ -142,20 +142,22 @@ class DFPFRepacker:
             record.file_type_index = rec.file_type_index
             record.compression_type = rec.compression_type
             record.uncompressed_size = rec.uncompressed_size
+            record.offset = rec.offset  # BUG FIX: Preserve original offset from header
 
             # Read raw data from .~p file
+            # Use a safe read size - cap at 16MB to avoid memory errors
+            # The rec.size field is often garbage in this format
+            safe_read_size = min(max(rec.uncompressed_size * 2, 65536), 16 * 1024 * 1024)
             with open(extractor.data_path, 'rb') as f:
                 f.seek(rec.offset)
-                record.data = f.read(rec.size)
-                record.size = rec.size
+                record.data = f.read(safe_read_size)
+                record.size = len(record.data)  # Use actual bytes read
 
-            # If compressed, decompress for repacking
-            if rec.compressed and rec.compression_type == COMPRESSION_ZLIB_V5:
-                try:
-                    record.data = zlib.decompress(record.data, 15)
-                    record.uncompressed_size = len(record.data)
-                except zlib.error:
-                    print(f"  Warning: Could not decompress {rec.full_filename}, storing as-is")
+            # BUG FIX: Keep original compressed data and size for repacking
+            # Previously this decompressed the data which caused size mismatch
+            # when repacking (decompressed data is smaller than original compressed size)
+            # The header stores original compressed offset/size, so we must preserve
+            # the original compressed data for correct repacking
 
             self.records.append(record)
 
@@ -172,16 +174,18 @@ class DFPFRepacker:
           file_type_index = ((raw_dword3 << 4) >> 24) >> 1
           compression_type = data[15] & 0x0F
 
-        Verified encode formulas (tested):
-          raw_dword0 = uncompressed_size << 8
-          raw_dword1 = name_offset << 11
-          raw_dword2 = (offset << 3) | (size & 0xFFFFFFF0)
-          raw_dword3 = ((file_type_index * 2) << 20) | (compression_type & 0x0F)
+        IMPORTANT: The original format encodes only offset in raw_dword2 (as offset << 3),
+        and size is derived as offset >> 1 (NOT independently stored). The actual compressed
+        size is determined by zlib stream boundaries, not by the size field.
+
+        So we encode: raw_dword2 = sequential_offset << 3
+        And size in header = sequential_offset >> 1 (derived, not actual compressed size)
         """
         raw_dword0 = record.uncompressed_size << 8
         raw_dword1 = name_offset << 11
-        raw_dword2 = (record.offset << 3) | (record.size & 0xFFFFFFF0)
-        raw_dword3 = ((record.file_type_index * 2) << 20) | (record.compression_type & 0x0F)
+        # Original format: raw_dword2 = offset << 3 only (size is derived as offset >> 1)
+        raw_dword2 = record.offset << 3
+        raw_dword3 = (record.file_type_index << 20) | (record.compression_type & 0x0F)
 
         return struct.pack(">IIII", raw_dword0, raw_dword1, raw_dword2, raw_dword3)
 
@@ -213,26 +217,22 @@ class DFPFRepacker:
 
         header_fixed_size = 4 + 1 + 3 + self.HEADER_SIZE  # 96 bytes
 
-        ext_table_size = len(self.file_extensions) * 16
+        # Calculate ACTUAL extension table size (variable length entries)
+        ext_table_size = sum(4 + len(ext_name.encode('ascii')) + 12 for ext_name in self.file_extensions)
         file_records_size = len(self.records) * 16
 
         file_ext_offset = header_fixed_size
         name_dir_offset = file_ext_offset + ext_table_size
         file_records_offset = name_dir_offset + name_dir_size
 
-        # Build the .~p data file
-        data_parts = []
-        current_offset = 0
-
-        for rec in self.records:
-            rec.offset = current_offset
-            data_parts.append(rec.data)
-            current_offset += rec.size
-
-        # Write .~p data file
+        # Build the .~p data file - write data SEQUENTIALLY, not at original offsets
+        # Original offsets may be garbage; we recalculate them based on actual data positions
+        data_offsets = []  # Track new offset for each record
         with open(data_out, 'wb') as f:
-            for data in data_parts:
-                f.write(data)
+            for rec in self.records:
+                data_offsets.append(f.tell())
+                f.write(rec.data)
+            current_offset = f.tell()
 
         # Build the .~h header file
         with open(header_out, 'wb') as f:
@@ -276,7 +276,9 @@ class DFPFRepacker:
             f.write(name_dir)
 
             # File records (16 bytes each)
+            # Update each record with its new sequential offset before packing
             for i, rec in enumerate(self.records):
+                rec.offset = data_offsets[i]  # Use the new sequential offset
                 rec_bytes = self._pack_file_record(rec, name_offsets[i])
                 f.write(rec_bytes)
 
